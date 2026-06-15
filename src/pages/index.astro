@@ -1,0 +1,115 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Icon from "@/components/Icon.astro";
+---
+
+<BaseLayout>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/" aria-label="FutScore home">
+        <Icon name="world-cup" size={42} />
+        <span>FutScore</span>
+      </a>
+
+      <label class="search-shell" aria-label="Buscar seleccion">
+        <span aria-hidden="true"
+          ><Icon name="search" cls="inline-icon" size={16} /></span
+        >
+        <input id="search" type="search" placeholder="Buscar equipo" />
+      </label>
+
+      <nav class="top-nav" aria-label="Principal">
+        <a href="#matches">Partidos</a>
+        <a href="#groups">Grupos</a>
+        <a href="#match-detail">Detalle</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="score-layout">
+    <aside class="left-rail">
+      <section class="panel league-panel">
+        <h2>FIFA World Cup</h2>
+        <a class="league-link active" href="#matches"
+          ><span>WC</span> Partidos</a
+        >
+        <a class="league-link" href="#groups"><span>G</span> Grupos</a>
+        <a class="league-link" href="#match-detail"
+          ><span>i</span> Detalle seleccionado</a
+        >
+      </section>
+    </aside>
+
+    <section class="center-feed">
+      <section class="panel date-card">
+        <div class="date-row">
+          <button type="button" aria-label="Dia anterior"
+            ><Icon name="chevron-left" cls="inline-icon" size={16} /></button
+          >
+          <strong>Mundial 2026</strong>
+          <button type="button" aria-label="Dia siguiente"
+            ><Icon name="chevron-right" cls="inline-icon" size={16} /></button
+          >
+        </div>
+        <div class="filter-row">
+          <button class="chip" data-view="live">En vivo</button>
+          <button class="chip" data-view="today">Hoy</button>
+          <button class="chip" data-view="all" data-active="true">Todos</button>
+          <select id="group-filter" aria-label="Filtrar grupo">
+            <option value="all">Todos los grupos</option>
+          </select>
+          <button
+            id="refresh"
+            class="refresh-btn"
+            type="button"
+            aria-label="Actualizar"
+            ><Icon name="refresh" cls="inline-icon" size={16} /></button
+          >
+        </div>
+      </section>
+
+      <section id="matches" class="match-stack" aria-label="Partidos"></section>
+    </section>
+
+    <aside class="right-rail">
+      <section class="panel data-widget">
+        <div class="feed-copy">
+          <div class="feed-title-row">
+            <span class="feed-dot" aria-hidden="true"
+              ><Icon name="dot" cls="feed-dot-icon" size={10} /></span
+            >
+            <h2>Feed ESPN</h2>
+          </div>
+          <p id="data-status">Preparando datos...</p>
+        </div>
+        <div class="source-pill">
+          <small>Fuente</small>
+          <span id="data-source">demo local</span>
+          <time id="updated-at">--:--</time>
+        </div>
+      </section>
+
+      <section class="panel detail-widget selected-match-widget">
+        <div id="match-detail"></div>
+      </section>
+
+      <section
+        class="panel standings-shell side-standings"
+        aria-label="Grupos del Mundial"
+      >
+        <div class="section-title">
+          <div>
+            <h2>FIFA World Cup</h2>
+            <p>Grupos calculados</p>
+          </div>
+          <span>A-L</span>
+        </div>
+        <div id="groups" class="standings-grid"></div>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module">
+    import "/src/scripts/app.ts";
+  </script>
+</BaseLayout>
