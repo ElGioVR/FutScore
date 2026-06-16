@@ -14,6 +14,10 @@ async function fetchPayload(): Promise<WorldCupPayload> {
 }
 
 function parseLocalDate(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+    return new Date(value);
+  }
+
   const [datePart, timePart = "00:00"] = value.split(" ");
   const [month, day, year] = datePart.split("/").map(Number);
   const [hours, minutes] = timePart.split(":").map(Number);

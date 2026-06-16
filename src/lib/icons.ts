@@ -7,6 +7,8 @@ export function icon(name: string, className = "", size = 16) {
       return `<svg ${common} class="${className}"><polyline points="15 18 9 12 15 6"></polyline></svg>`;
     case "chevron-right":
       return `<svg ${common} class="${className}"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+    case "chevron-down":
+      return `<svg ${common} class="${className}"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
     case "refresh":
       return `<svg ${common} class="${className}"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a8.94 8.94 0 1 1-2.3-9.19"></path></svg>`;
     case "tv":

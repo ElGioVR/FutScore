@@ -41,7 +41,7 @@ import Icon from "@/components/Icon.astro";
     </aside>
 
     <section class="center-feed">
-      <section class="panel date-card">
+      <section class="panel date-card" data-filters-open="false">
         <div class="date-row">
           <button type="button" aria-label="Dia anterior"
             ><Icon name="chevron-left" cls="inline-icon" size={16} /></button
@@ -51,7 +51,17 @@ import Icon from "@/components/Icon.astro";
             ><Icon name="chevron-right" cls="inline-icon" size={16} /></button
           >
         </div>
-        <div class="filter-row">
+        <button
+          id="filter-toggle"
+          class="filter-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="match-filters"
+        >
+          <span>Filtros</span>
+          <Icon name="chevron-down" cls="inline-icon" size={16} />
+        </button>
+        <div id="match-filters" class="filter-row">
           <button class="chip" data-view="live">En vivo</button>
           <button class="chip" data-view="today">Hoy</button>
           <button class="chip" data-view="all" data-active="true">Todos</button>
@@ -69,6 +79,21 @@ import Icon from "@/components/Icon.astro";
       </section>
 
       <section id="matches" class="match-stack" aria-label="Partidos"></section>
+
+      <section
+        id="groups"
+        class="panel standings-shell mobile-standings"
+        aria-label="Grupos del Mundial"
+      >
+        <div class="section-title">
+          <div>
+            <h2>Grupos</h2>
+            <p>Tabla por grupo</p>
+          </div>
+          <span>A-L</span>
+        </div>
+        <div class="standings-grid" data-groups-grid></div>
+      </section>
     </section>
 
     <aside class="right-rail">
@@ -93,10 +118,7 @@ import Icon from "@/components/Icon.astro";
         <div id="match-detail"></div>
       </section>
 
-      <section
-        class="panel standings-shell side-standings"
-        aria-label="Grupos del Mundial"
-      >
+      <section class="panel standings-shell side-standings" aria-label="Grupos del Mundial">
         <div class="section-title">
           <div>
             <h2>FIFA World Cup</h2>
@@ -104,7 +126,7 @@ import Icon from "@/components/Icon.astro";
           </div>
           <span>A-L</span>
         </div>
-        <div id="groups" class="standings-grid"></div>
+        <div class="standings-grid" data-groups-grid></div>
       </section>
     </aside>
   </main>

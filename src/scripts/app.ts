@@ -14,6 +14,7 @@ const state: {
   activeDate: Date | null;
   activeDetailTab: DetailTab;
   mobileDetailOpen: boolean;
+  selectedByUser: boolean;
 } = {
   payload: fallbackPayload,
   activeView: "all",
@@ -23,11 +24,12 @@ const state: {
   activeDate: null,
   activeDetailTab: "facts",
   mobileDetailOpen: false,
+  selectedByUser: false,
 };
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector(selector) as T;
 const matchesEl = $("#matches");
-const groupsEl = $("#groups");
+const groupGridEls = Array.from(document.querySelectorAll<HTMLElement>("[data-groups-grid]"));
 const detailEl = $("#match-detail");
 const statusEl = $("#data-status");
 const updatedEl = $("#updated-at");
@@ -35,6 +37,8 @@ const sourceEl = $("#data-source");
 const groupFilterEl = $("#group-filter") as HTMLSelectElement;
 const searchEl = $("#search") as HTMLInputElement;
 const rootEl = document.querySelector(".score-layout") as HTMLElement;
+const dateCardEl = document.querySelector(".date-card") as HTMLElement;
+const filterToggleEl = $("#filter-toggle") as HTMLButtonElement;
 const dateLabelEl = document.querySelector(".date-row strong") as HTMLElement;
 const dateButtons = Array.from(document.querySelectorAll<HTMLButtonElement>(".date-row button"));
 
@@ -65,6 +69,7 @@ async function loadWorldCupData() {
   try {
     state.payload = await fetchJson<WorldCupPayload>("/api/worldcup.json", 26000);
     state.selectedMatchId = pickInitialMatchId();
+    state.selectedByUser = false;
     setDataStatus(
       state.payload.source === "espn"
         ? "Marcadores, eventos y TV en vivo"
@@ -77,6 +82,7 @@ async function loadWorldCupData() {
     console.warn(error);
     state.payload = fallbackPayload;
     state.selectedMatchId = pickInitialMatchId();
+    state.selectedByUser = false;
     setDataStatus("Usando datos demo", "fallback");
   }
   render();
@@ -142,6 +148,10 @@ function getStatus(game: ApiGame): MatchStatus {
 }
 
 function parseLocalDate(value: string) {
+  if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
+    return new Date(value);
+  }
+
   const [datePart, timePart = "00:00"] = value.split(" ");
   const [month, day, year] = datePart.split("/").map(Number);
   const [hours, minutes] = timePart.split(":").map(Number);
@@ -217,19 +227,52 @@ function normalizeScorers(value?: string) {
     .filter(Boolean);
 }
 
+function gameSearchText(game: ApiGame) {
+  return `${getTeamName(game, "home")} ${getTeamName(game, "away")} ${game.group} ${game.matchday} ${game.headline?.text ?? ""}`.toLowerCase();
+}
+
 function filteredGames() {
   return [...state.payload.games]
     .sort((a, b) => parseLocalDate(a.local_date).getTime() - parseLocalDate(b.local_date).getTime())
     .filter((game) => {
       const status = getStatus(game);
-      const text = `${getTeamName(game, "home")} ${getTeamName(game, "away")} ${game.group} ${game.matchday} ${game.headline?.text ?? ""}`.toLowerCase();
       if (state.activeView === "live" && status !== "live") return false;
       if (state.activeView === "today" && !isToday(game)) return false;
       if (state.activeView === "date" && state.activeDate && !sameDay(parseLocalDate(game.local_date), state.activeDate)) return false;
       if (state.activeGroup !== "all" && game.group !== state.activeGroup) return false;
-      if (state.query && !text.includes(state.query.toLowerCase())) return false;
+      if (state.query && !gameSearchText(game).includes(state.query.toLowerCase())) return false;
       return true;
     });
+}
+
+function groupMatchesQuery(group: string, query: string) {
+  const normalizedQuery = query.toLowerCase();
+  return state.payload.teams.some((team) => {
+    if (team.groups !== group) return false;
+    return `${team.name_en} ${team.fifa_code ?? ""}`.toLowerCase().includes(normalizedQuery);
+  });
+}
+
+function visibleGroupsForCurrentContext() {
+  if (state.activeGroup !== "all") return new Set([state.activeGroup]);
+
+  const hasActiveFilters = Boolean(state.query) || state.activeView !== "all" || Boolean(state.activeDate);
+  if (hasActiveFilters) {
+    const visibleGroups = new Set(filteredGames().map((game) => game.group).filter(Boolean));
+    if (state.query) {
+      state.payload.teams.forEach((team) => {
+        if (team.groups && groupMatchesQuery(team.groups, state.query)) visibleGroups.add(team.groups);
+      });
+    }
+    return visibleGroups;
+  }
+
+  if (state.selectedByUser) {
+    const selectedGame = state.payload.games.find((game) => game.id === state.selectedMatchId);
+    if (selectedGame?.group) return new Set([selectedGame.group]);
+  }
+
+  return null;
 }
 
 function pickInitialMatchId() {
@@ -407,6 +450,7 @@ function renderMatches() {
   document.querySelectorAll<HTMLButtonElement>(".match-card").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedMatchId = button.dataset.matchId ?? state.selectedMatchId;
+      state.selectedByUser = true;
       state.activeDetailTab = "facts";
       if (isMobileViewport()) {
         state.mobileDetailOpen = true;
@@ -420,6 +464,7 @@ function renderGroups() {
   const groups = [...new Set(state.payload.teams.map((team) => team.groups).filter((group): group is string => Boolean(group)))].sort();
   groupFilterEl.innerHTML = `<option value="all">Todos los grupos</option>${groups.map((group) => `<option value="${escapeHtml(group)}">Group ${escapeHtml(group)}</option>`).join("")}`;
   groupFilterEl.value = state.activeGroup;
+  const visibleGroups = visibleGroupsForCurrentContext();
 
   const standings = state.payload.groups.length
     ? state.payload.groups
@@ -430,8 +475,8 @@ function renderGroups() {
         .map((team) => ({ team_id: team.id, mp: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0 })),
     }));
 
-  groupsEl.innerHTML = standings
-    .filter((group) => state.activeGroup === "all" || group.group === state.activeGroup)
+  const groupsHtml = standings
+    .filter((group) => !visibleGroups || visibleGroups.has(String(group.group)))
     .sort((a, b) => String(a.group).localeCompare(String(b.group)))
     .map((group) => {
       const rows = [...(group.teams ?? [])].sort((a, b) => Number(b.pts) - Number(a.pts) || Number(b.gd) - Number(a.gd));
@@ -470,7 +515,11 @@ function renderGroups() {
         </section>
       `;
     })
-    .join("");
+    .join("") || `<p class="empty-copy">No hay grupos para este filtro.</p>`;
+
+  groupGridEls.forEach((groupsEl) => {
+    groupsEl.innerHTML = groupsHtml;
+  });
 }
 
 function renderDetail() {
@@ -563,9 +612,9 @@ function renderDetail() {
           <span>${escapeHtml(game.group ? `Group ${game.group}` : "Home")}</span>
         </div>
 
-        <div class="selected-score">
+        <div class="selected-score" data-status="${status}">
           <strong>${Number(game.home_score) || 0} - ${Number(game.away_score) || 0}</strong>
-          <span>${escapeHtml(game.status_detail ?? statusText)}</span>
+          <span class="${status === "live" ? "selected-live-time" : ""}">${escapeHtml(game.status_detail ?? statusText)}</span>
         </div>
 
         <div class="selected-team">
@@ -654,12 +703,20 @@ dateButtons.forEach((button, index) => {
 
 groupFilterEl.addEventListener("change", () => {
   state.activeGroup = groupFilterEl.value;
+  state.selectedByUser = false;
   render();
 });
 
 searchEl.addEventListener("input", () => {
   state.query = searchEl.value.trim();
+  state.selectedByUser = false;
   render();
+});
+
+filterToggleEl.addEventListener("click", () => {
+  const isOpen = dateCardEl.dataset.filtersOpen === "true";
+  dateCardEl.dataset.filtersOpen = String(!isOpen);
+  filterToggleEl.setAttribute("aria-expanded", String(!isOpen));
 });
 
 $("#refresh").addEventListener("click", loadWorldCupData);

@@ -143,14 +143,9 @@ async function fetchJsonWithRetry<T>(url: string, timeoutMs = 16000, attempts = 
   throw lastError;
 }
 
-function formatDateForUi(value: string) {
+function normalizeKickoffDate(value: string) {
   const date = new Date(value);
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const year = date.getFullYear();
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${month}/${day}/${year} ${hours}:${minutes}`;
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
 }
 
 function extractGroup(value = "") {
@@ -337,7 +332,7 @@ function normalizeEspnPayload(scoreboard: EspnScoreboard): WorldCupPayload {
       away_scorers: scorerText(competition.details, away.id),
       group,
       matchday: competition.altGameNote ?? event.name ?? "FIFA World Cup",
-      local_date: formatDateForUi(competition.date || event.date),
+      local_date: normalizeKickoffDate(competition.date || event.date),
       stadium_id: stadiumId,
       type,
       home_team_name_en: home.team.displayName,
