@@ -1018,3 +1018,12 @@
 [2m16:41:04[22m [34m[watch][39m src/layouts/BaseLayout.astro
 [2m16:41:27[22m [34m[watch][39m src/layouts/BaseLayout.astro
 [2m16:41:27[22m [34m[watch][39m src/layouts/BaseLayout.astro
+[2m17:10:01[22m Configuration file updated. Restarting...
+[2m17:10:17[22m Configuration file updated. Restarting...
+[2m17:10:44[22m Configuration file updated. Restarting...
+[2m17:10:45[22m [34m[content][39m Syncing content
+[2m17:10:45[22m [34m[content][39m Astro config changed
+[2m17:10:45[22m [34m[content][39m Clearing content store
+[2m17:10:45[22m [34m[content][39m Synced content
+[2m17:10:45[22m [34m[types][39m Generated [2m849ms[22m
+[2m17:10:45[22m [34m[vite][39m Re-optimizing dependencies because vite config has changed
