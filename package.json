@@ -4,16 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "astro dev --host 0.0.0.0 --port 3000",
-    "build": "astro check && astro build",
-    "preview": "astro preview --host 0.0.0.0"
+    "dev": "set ASTRO_TELEMETRY_DISABLED=1&& astro dev --host 0.0.0.0 --port 3000",
+    "build": "set ASTRO_TELEMETRY_DISABLED=1&& astro check && astro build",
+    "preview": "set ASTRO_TELEMETRY_DISABLED=1&& astro preview --host 0.0.0.0"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
+    "@astrojs/node": "^9.4.4",
     "@astrojs/tailwind": "^5.1.2",
-    "@astrojs/vercel": "^8.2.11",
     "astro": "^5.9.3",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.3"
-  }
+  },
+  "devDependencies": {}
 }
