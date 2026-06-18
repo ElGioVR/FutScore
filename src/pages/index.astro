@@ -4,6 +4,43 @@ import Icon from "@/components/Icon.astro";
 ---
 
 <BaseLayout>
+  <section
+    id="ligamx-banner"
+    class="ligamx-banner"
+    data-minimized="false"
+    aria-label="Proximamente mas ligas"
+  >
+    <div class="ligamx-banner-inner">
+      <div class="league-coming-grid">
+        <article class="league-coming-card">
+          <img class="league-coming-logo league-coming-logo-wide" src="/ligamx-logo.png" alt="" aria-hidden="true" />
+          <div class="league-coming-copy">
+            <span>Proximamente</span>
+            <strong>Data de Liga MX</strong>
+            <p>Calendario, marcadores y tablas de la liga mexicana.</p>
+          </div>
+        </article>
+        <article class="league-coming-card">
+          <img class="league-coming-logo league-coming-logo-tall" src="/premier-league-logo.png" alt="" aria-hidden="true" />
+          <div class="league-coming-copy">
+            <span>Proximamente</span>
+            <strong>Data de Premier League</strong>
+            <p>Partidos, resultados y posiciones de Inglaterra.</p>
+          </div>
+        </article>
+      </div>
+      <button
+        id="ligamx-banner-toggle"
+        class="ligamx-banner-toggle"
+        type="button"
+        aria-expanded="true"
+        aria-controls="ligamx-banner"
+      >
+        Minimizar
+      </button>
+    </div>
+  </section>
+
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="/" aria-label="FutScore home">
@@ -18,10 +55,41 @@ import Icon from "@/components/Icon.astro";
         <input id="search" type="search" placeholder="Buscar equipo" />
       </label>
 
+      <button
+        id="mobile-menu-toggle"
+        class="mobile-menu-toggle"
+        type="button"
+        aria-label="Abrir menu"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+      >
+        <Icon name="menu" cls="inline-icon" size={22} />
+      </button>
+
       <nav class="top-nav" aria-label="Principal">
-        <a href="#matches">Partidos</a>
+        <a href="#matches" data-section-link="matches">Partidos</a>
+        <a href="#bracket" data-section-link="bracket">Llave</a>
         <a href="#groups">Grupos</a>
         <a href="#match-detail">Detalle</a>
+      </nav>
+
+      <nav id="mobile-menu" class="mobile-menu" aria-label="Menu movil" hidden>
+        <a href="#matches" data-section-link="matches">
+          <Icon name="list" cls="inline-icon" size={18} />
+          <span>Partidos</span>
+        </a>
+        <a href="#groups">
+          <Icon name="table" cls="inline-icon" size={18} />
+          <span>Grupos</span>
+        </a>
+        <a href="#bracket" data-section-link="bracket">
+          <Icon name="git-branch" cls="inline-icon" size={18} />
+          <span>Llave</span>
+        </a>
+        <a href="#match-detail">
+          <Icon name="info" cls="inline-icon" size={18} />
+          <span>Detalle</span>
+        </a>
       </nav>
     </div>
   </header>
@@ -30,13 +98,25 @@ import Icon from "@/components/Icon.astro";
     <aside class="left-rail">
       <section class="panel league-panel">
         <h2>FIFA World Cup</h2>
-        <a class="league-link active" href="#matches"
-          ><span>WC</span> Partidos</a
+        <a class="league-link active" href="#matches" data-section-link="matches"
+          ><span><Icon name="list" cls="inline-icon" size={16} /></span> Partidos</a
         >
-        <a class="league-link" href="#groups"><span>G</span> Grupos</a>
+        <a class="league-link" href="#groups"><span><Icon name="table" cls="inline-icon" size={16} /></span> Grupos</a>
+        <a class="league-link" href="#bracket" data-section-link="bracket"><span><Icon name="git-branch" cls="inline-icon" size={16} /></span> Llave</a>
         <a class="league-link" href="#match-detail"
-          ><span>i</span> Detalle seleccionado</a
+          ><span><Icon name="info" cls="inline-icon" size={16} /></span> Detalle seleccionado</a
         >
+      </section>
+
+      <section id="groups" class="panel standings-shell side-standings" aria-label="Grupos del Mundial">
+        <div class="section-title">
+          <div>
+            <h2>FIFA World Cup</h2>
+            <p>Grupos calculados</p>
+          </div>
+          <span>A-L</span>
+        </div>
+        <div class="standings-grid" data-groups-grid></div>
       </section>
     </aside>
 
@@ -81,24 +161,49 @@ import Icon from "@/components/Icon.astro";
       <section id="matches" class="match-stack" aria-label="Partidos"></section>
 
       <section
-        id="groups"
-        class="panel standings-shell mobile-standings"
-        aria-label="Grupos del Mundial"
+        id="bracket"
+        class="panel bracket-shell"
+        aria-label="Llave de eliminacion directa"
+        hidden
       >
         <div class="section-title">
           <div>
-            <h2>Grupos</h2>
-            <p>Tabla por grupo</p>
+            <h2>Llave</h2>
+            <p>Eliminacion directa</p>
           </div>
-          <span>A-L</span>
+          <span>ESPN</span>
         </div>
-        <div class="standings-grid" data-groups-grid></div>
+        <div id="knockout-bracket" class="bracket-board"></div>
       </section>
     </section>
 
     <aside class="right-rail">
-      <section class="panel data-widget">
-        <div class="feed-copy">
+      <section class="panel detail-widget selected-match-widget">
+        <div id="match-detail"></div>
+      </section>
+
+    </aside>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-main">
+      <section class="footer-brand" aria-label="FutScore">
+        <Icon name="world-cup" size={44} />
+        <h2>FutScore</h2>
+        <p>Calendario, grupos y llave del Mundial 2026.</p>
+      </section>
+
+      <nav class="footer-links" aria-label="Secciones de la app">
+        <h2>Secciones</h2>
+        <a href="#matches" data-section-link="matches">Partidos</a>
+        <a href="#groups">Grupos</a>
+        <a href="#bracket" data-section-link="bracket">Llave</a>
+        <a href="#match-detail">Detalle seleccionado</a>
+      </nav>
+
+      <section class="footer-feed" aria-label="Estado del feed">
+        <div>
           <div class="feed-title-row">
             <span class="feed-dot" aria-hidden="true"
               ><Icon name="dot" cls="feed-dot-icon" size={10} /></span
@@ -113,23 +218,15 @@ import Icon from "@/components/Icon.astro";
           <time id="updated-at">--:--</time>
         </div>
       </section>
+    </div>
 
-      <section class="panel detail-widget selected-match-widget">
-        <div id="match-detail"></div>
-      </section>
-
-      <section class="panel standings-shell side-standings" aria-label="Grupos del Mundial">
-        <div class="section-title">
-          <div>
-            <h2>FIFA World Cup</h2>
-            <p>Grupos calculados</p>
-          </div>
-          <span>A-L</span>
-        </div>
-        <div class="standings-grid" data-groups-grid></div>
-      </section>
-    </aside>
-  </main>
+    <div class="footer-bottom">
+      <div class="footer-bottom-inner">
+        <span>Copyright 2026 FutScore</span>
+        <span>Datos de partidos sujetos a disponibilidad del feed.</span>
+      </div>
+    </div>
+  </footer>
 
   <script>
     import "../scripts/app.ts";
