@@ -9,6 +9,7 @@ import {
   type ApiTeamStat,
   type WorldCupPayload,
 } from "@/lib/worldcup26";
+import { fetchJson } from "@/lib/fetch";
 
 export const prerender = false;
 
@@ -112,36 +113,7 @@ type EspnDetail = {
   }>;
 };
 
-function fetchJson<T>(url: string, timeoutMs = 16000): Promise<T> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-  return fetch(url, {
-    signal: controller.signal,
-    headers: {
-      accept: "application/json",
-      "user-agent": "FutScore/1.0",
-    },
-  })
-    .then((response) => {
-      if (!response.ok) throw new Error(`${url} returned ${response.status}`);
-      return response.json() as Promise<T>;
-    })
-    .finally(() => clearTimeout(timeout));
-}
-
-async function fetchJsonWithRetry<T>(url: string, timeoutMs = 16000, attempts = 3): Promise<T> {
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    try {
-      return await fetchJson<T>(url, timeoutMs);
-    } catch (error) {
-      lastError = error;
-      await new Promise((resolve) => setTimeout(resolve, attempt * 650));
-    }
-  }
-  throw lastError;
-}
 
 function normalizeKickoffDate(value: string) {
   const date = new Date(value);
@@ -426,7 +398,11 @@ async function getEspnPayload(): Promise<WorldCupPayload> {
   url.searchParams.set("dates", "20260611-20260719");
   url.searchParams.set("limit", "300");
 
-  const scoreboard = await fetchJsonWithRetry<EspnScoreboard>(url.toString(), 22000, 3);
+  const scoreboard = await fetchJson<EspnScoreboard>(url.toString(), {
+    timeoutMs: 22000,
+    retries: 3,
+    retryDelay: (attempt) => attempt * 650,
+  });
   const payload = normalizeEspnPayload(scoreboard);
   if (!payload.games.length) throw new Error("ESPN returned an empty World Cup feed");
   return payload;
@@ -434,10 +410,26 @@ async function getEspnPayload(): Promise<WorldCupPayload> {
 
 async function getWorldCup26Payload(): Promise<WorldCupPayload> {
   const [gamesResult, teamsResult, stadiumsResult, groupsResult] = await Promise.allSettled([
-    fetchJsonWithRetry<{ games: ApiGame[] }>(`${WORLDCUP26_BASE_URL}/get/games`, 26000, 4),
-    fetchJsonWithRetry<{ teams: ApiTeam[] }>(`${WORLDCUP26_BASE_URL}/get/teams`, 16000, 3),
-    fetchJsonWithRetry<{ stadiums: ApiStadium[] }>(`${WORLDCUP26_BASE_URL}/get/stadiums`, 16000, 2),
-    fetchJsonWithRetry<{ groups: ApiGroupStanding[] }>(`${WORLDCUP26_BASE_URL}/get/groups`, 16000, 3),
+    fetchJson<{ games: ApiGame[] }>(`${WORLDCUP26_BASE_URL}/get/games`, {
+      timeoutMs: 26000,
+      retries: 4,
+      retryDelay: (attempt) => attempt * 650,
+    }),
+    fetchJson<{ teams: ApiTeam[] }>(`${WORLDCUP26_BASE_URL}/get/teams`, {
+      timeoutMs: 16000,
+      retries: 3,
+      retryDelay: (attempt) => attempt * 650,
+    }),
+    fetchJson<{ stadiums: ApiStadium[] }>(`${WORLDCUP26_BASE_URL}/get/stadiums`, {
+      timeoutMs: 16000,
+      retries: 2,
+      retryDelay: (attempt) => attempt * 650,
+    }),
+    fetchJson<{ groups: ApiGroupStanding[] }>(`${WORLDCUP26_BASE_URL}/get/groups`, {
+      timeoutMs: 16000,
+      retries: 3,
+      retryDelay: (attempt) => attempt * 650,
+    }),
   ]);
 
   if (gamesResult.status === "rejected" || teamsResult.status === "rejected") {

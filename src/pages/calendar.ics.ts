@@ -1,5 +1,10 @@
 import { type APIRoute } from "astro";
 import { type WorldCupPayload, fallbackPayload } from "@/lib/worldcup26";
+import {
+  parseLocalDate,
+  formatIcsDate,
+  escapeIcs,
+} from "@/lib/date";
 
 export const prerender = false;
 
@@ -11,32 +16,6 @@ async function fetchPayload(): Promise<WorldCupPayload> {
   } catch {
     return fallbackPayload;
   }
-}
-
-function parseLocalDate(value: string) {
-  if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
-    return new Date(value);
-  }
-
-  const [datePart, timePart = "00:00"] = value.split(" ");
-  const [month, day, year] = datePart.split("/").map(Number);
-  const [hours, minutes] = timePart.split(":").map(Number);
-  return new Date(year, month - 1, day, hours, minutes);
-}
-
-function formatIcsDate(value: Date) {
-  return value
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace(/\.\d{3}Z$/, "Z");
-}
-
-function escapeIcs(value: unknown) {
-  return String(value ?? "")
-    .replace(/\\/g, "\\\\")
-    .replace(/\n/g, "\\n")
-    .replace(/,/g, "\\,")
-    .replace(/;/g, "\\;");
 }
 
 function buildCalendarDescription(game: WorldCupPayload["games"][number]) {
