@@ -219,8 +219,7 @@ function getStatus(game: ApiGame): MatchStatus {
     result = "finished";
   else if (elapsed !== "notstarted" && elapsed !== "" && elapsed !== "null")
     result = "live";
-  else
-    result = "upcoming";
+  else result = "upcoming";
 
   statusCache.set(game.id, result);
   return result;
@@ -544,7 +543,6 @@ function renderMatches() {
         </button>
       `
       : "");
-
 }
 
 function renderGroups() {
@@ -747,7 +745,6 @@ function renderKnockoutBracket() {
       </div>
     </div>
   `;
-
 }
 
 function renderBracketSlot(
@@ -1255,9 +1252,12 @@ window.addEventListener("resize", () => {
 
 function initEventDelegation() {
   matchesEl.addEventListener("click", (event) => {
-    const matchCard = (event.target as HTMLElement).closest<HTMLButtonElement>(".match-card");
+    const matchCard = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      ".match-card",
+    );
     if (matchCard) {
-      state.selectedMatchId = matchCard.dataset.matchId ?? state.selectedMatchId;
+      state.selectedMatchId =
+        matchCard.dataset.matchId ?? state.selectedMatchId;
       state.selectedByUser = true;
       state.activeDetailTab = "facts";
       if (isMobileViewport() && !isTableViewport()) {
@@ -1276,7 +1276,9 @@ function initEventDelegation() {
       return;
     }
 
-    const loadMoreButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".load-more-matches");
+    const loadMoreButton = (
+      event.target as HTMLElement
+    ).closest<HTMLButtonElement>(".load-more-matches");
     if (loadMoreButton) {
       state.visibleDayCount += 3;
       render();
@@ -1284,9 +1286,12 @@ function initEventDelegation() {
   });
 
   knockoutEl.addEventListener("click", (event) => {
-    const bracketGame = (event.target as HTMLElement).closest<HTMLButtonElement>(".bracket-game");
+    const bracketGame = (
+      event.target as HTMLElement
+    ).closest<HTMLButtonElement>(".bracket-game");
     if (bracketGame) {
-      state.selectedMatchId = bracketGame.dataset.matchId ?? state.selectedMatchId;
+      state.selectedMatchId =
+        bracketGame.dataset.matchId ?? state.selectedMatchId;
       state.selectedByUser = true;
       state.activeDetailTab = "facts";
       if (isMobileViewport() && !isTableViewport()) {
@@ -1297,9 +1302,12 @@ function initEventDelegation() {
   });
 
   const handleDetailTabClick = (event: Event) => {
-    const tabButton = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-detail-tab]");
+    const tabButton = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-detail-tab]",
+    );
     if (tabButton) {
-      state.activeDetailTab = (tabButton.dataset.detailTab as DetailTab) ?? "facts";
+      state.activeDetailTab =
+        (tabButton.dataset.detailTab as DetailTab) ?? "facts";
       renderDetail();
     }
   };
@@ -1309,7 +1317,9 @@ function initEventDelegation() {
   }
 
   const handleDetailCloseClick = (event: Event) => {
-    const closeButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".detail-close");
+    const closeButton = (
+      event.target as HTMLElement
+    ).closest<HTMLButtonElement>(".detail-close");
     if (closeButton) {
       resetAllFilters();
       render();

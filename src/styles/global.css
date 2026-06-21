@@ -430,7 +430,7 @@
   }
 
   .group-label {
-    @apply mx-4 mt-2 inline-flex rounded-lg border border-white/10 px-3 py-1 text-xs text-zinc-300;
+    @apply mx-4 mt-2 mb-2 inline-flex rounded-lg border border-white/10 px-3 py-1 text-xs text-zinc-300;
   }
 
   .match-row {
@@ -1359,8 +1359,6 @@
   .date-card[data-filters-open="false"] .filter-row {
     display: none;
   }
-
-
 
   .match-row {
     grid-template-columns: 34px minmax(0, 1fr) 58px minmax(0, 1fr);
