@@ -261,7 +261,12 @@
   .footer-feed {
     @apply grid w-full max-w-[420px] grid-cols-[minmax(0,1fr)_112px] items-start gap-5 rounded-xl border border-white/[0.07] bg-[#202020] p-5;
     background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02) 42%, rgba(16, 185, 129, 0.07)),
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.055),
+        rgba(255, 255, 255, 0.02) 42%,
+        rgba(16, 185, 129, 0.07)
+      ),
       #202020;
   }
 
@@ -278,42 +283,14 @@
   }
 
   @media (min-width: 1024px) and (max-width: 1279px) {
-    .score-layout[data-mobile-detail-open="true"] .filter-row {
-      margin-left: 0;
-      max-width: none;
+    .right-rail {
+      display: none;
     }
 
-    .score-layout[data-mobile-detail-open="true"] .right-rail {
-      grid-column: 2 / 3;
-      width: 100%;
-      margin-left: 0;
-      position: relative;
-      margin-top: 0; 
-      align-self: start; 
-    }
-
-    .score-layout[data-mobile-detail-open="true"] .right-rail .detail-widget {
-      width: 100%;
-      margin-left: 0;
-    }
-    .score-layout[data-mobile-detail-open="true"] .side-standings {
+    .side-standings {
       display: block;
       width: 100%;
-      max-height: none;
       margin-top: 12px;
-    }
-
-    .score-layout[data-mobile-detail-open="true"] .center-feed {
-      row-gap: 0;
-    }
-
-    .score-layout[data-mobile-detail-open="true"] {
-      row-gap: 0;
-      gap-row: 0;
-    }
-
-    .score-layout[data-mobile-detail-open="true"] .date-card {
-      margin-bottom: 0;
     }
   }
 
@@ -333,6 +310,10 @@
 
   .league-link {
     @apply mt-5 flex items-center gap-3 text-sm font-black text-white transition hover:text-emerald-300;
+  }
+
+  .league-link[aria-disabled="true"] {
+    @apply pointer-events-none opacity-40;
   }
 
   .league-link span {
@@ -372,7 +353,13 @@
   }
 
   .filter-row {
-    @apply grid grid-cols-[auto_auto_auto_minmax(0,1fr)_36px] gap-2 p-4;
+    @apply grid gap-2 p-4;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  }
+  .filter-row select {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
   }
 
   .filter-toggle {
@@ -390,13 +377,16 @@
   .chip {
     @apply inline-flex h-9 items-center justify-center rounded-full bg-[#303030] px-4 text-sm font-black text-white transition hover:bg-[#3a3a3a];
   }
+  .chip[data-view="today"] {
+    @apply mb-1;
+  }
 
   .chip[data-active="true"] {
     @apply bg-[#3d3d3d] text-white ring-1 ring-white/10;
   }
 
   .filter-row select {
-    @apply h-9 min-w-0 rounded-full border-0 bg-[#2b2b2b] px-4 text-sm font-medium text-zinc-300 outline-none;
+    @apply h-10 min-w-0 rounded-full border-0 bg-[#2b2b2b] px-4 text-base font-medium text-zinc-300 outline-none;
   }
 
   .refresh-btn {
@@ -422,8 +412,16 @@
   .league-card-header {
     @apply flex h-12 items-center justify-between px-5 text-sm font-black text-white;
     background:
-      radial-gradient(circle at 18% 0%, rgba(98, 185, 83, 0.45), transparent 9rem),
-      radial-gradient(circle at 40% -20%, rgba(235, 94, 62, 0.35), transparent 8rem),
+      radial-gradient(
+        circle at 18% 0%,
+        rgba(98, 185, 83, 0.45),
+        transparent 9rem
+      ),
+      radial-gradient(
+        circle at 40% -20%,
+        rgba(235, 94, 62, 0.35),
+        transparent 8rem
+      ),
       linear-gradient(110deg, #263e34 0%, #1f2e35 50%, #173ea5 100%);
   }
 
@@ -545,7 +543,11 @@
     margin: 0 auto;
     border-radius: 14px;
     background:
-      radial-gradient(circle at 50% 48%, rgba(255, 255, 255, 0.055), transparent 9rem),
+      radial-gradient(
+        circle at 50% 48%,
+        rgba(255, 255, 255, 0.055),
+        transparent 9rem
+      ),
       linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 35%),
       #1a1a1a;
     overflow: hidden;
@@ -553,7 +555,9 @@
 
   .bracket-game.selected {
     @apply border-emerald-300/45 bg-emerald-300/[0.08];
-    box-shadow: 0 0 0 1px rgba(110, 231, 183, 0.08), 0 14px 26px rgba(0, 0, 0, 0.22);
+    box-shadow:
+      0 0 0 1px rgba(110, 231, 183, 0.08),
+      0 14px 26px rgba(0, 0, 0, 0.22);
   }
 
   .bracket-game {
@@ -571,17 +575,28 @@
     border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.115);
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012)),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.045),
+        rgba(255, 255, 255, 0.012)
+      ),
       #151515;
     padding: 0.5rem 0.5rem 0.42rem;
     text-align: center;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
-    transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+    transition:
+      background 160ms ease,
+      border-color 160ms ease,
+      transform 160ms ease;
   }
 
   .bracket-game:hover {
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.018)),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.06),
+        rgba(255, 255, 255, 0.018)
+      ),
       #1e1e1e;
     border-color: rgba(255, 255, 255, 0.22);
   }
@@ -837,7 +852,8 @@
   }
 
   .side-standings {
-    @apply max-h-[760px] overflow-y-auto;
+    @apply overflow-y-auto;
+    max-height: 1180px;
   }
 
   .data-widget,
@@ -849,7 +865,12 @@
   .data-widget {
     @apply relative flex items-center justify-between gap-4 rounded-xl border-white/[0.07] p-4;
     background:
-      linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02) 42%, rgba(16, 185, 129, 0.07)),
+      linear-gradient(
+        135deg,
+        rgba(255, 255, 255, 0.055),
+        rgba(255, 255, 255, 0.02) 42%,
+        rgba(16, 185, 129, 0.07)
+      ),
       #1f1f1f;
   }
 
@@ -945,7 +966,11 @@
   .selected-match-top {
     @apply relative flex min-h-[92px] items-start justify-between gap-3 px-4 py-4;
     background:
-      radial-gradient(circle at 14% -30%, rgba(235, 94, 62, 0.45), transparent 7rem),
+      radial-gradient(
+        circle at 14% -30%,
+        rgba(235, 94, 62, 0.45),
+        transparent 7rem
+      ),
       linear-gradient(120deg, #273528 0%, #142a5f 54%, #14378d 100%);
   }
 
@@ -1178,6 +1203,21 @@
   }
 }
 
+@keyframes countdown-pulse {
+  0% {
+    transform: scale(1.6);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.countdown-pulse {
+  animation: live-pulse 0.3s ease-out;
+}
+
 @keyframes live-pulse {
   0%,
   100% {
@@ -1255,7 +1295,10 @@
     @apply justify-self-end;
   }
 
-  .ligamx-banner[data-minimized="true"] .league-coming-card:nth-child(2) .league-coming-copy span {
+  .ligamx-banner[data-minimized="true"]
+    .league-coming-card:nth-child(2)
+    .league-coming-copy
+    span {
     @apply hidden;
   }
 
@@ -1284,11 +1327,14 @@
     margin-right: -0.25rem;
     padding-left: 0.25rem;
     padding-right: 0.25rem;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
   }
 
   .bracket-tree {
-    width: 528px;
-    min-width: 528px;
+    min-width: 0;
+    width: 100%;
   }
 
   .search-shell {
@@ -1300,10 +1346,6 @@
     height: auto;
     padding-top: 12px;
     padding-bottom: 12px;
-  }
-
-  .filter-row {
-    grid-template-columns: 1fr 1fr;
   }
 
   .calendar-options {
@@ -1318,11 +1360,7 @@
     display: none;
   }
 
-  .filter-row select,
-  .refresh-btn {
-    grid-column: span 1;
-    width: 100%;
-  }
+
 
   .match-row {
     grid-template-columns: 34px minmax(0, 1fr) 58px minmax(0, 1fr);
@@ -1365,5 +1403,24 @@
 
   .row-icons {
     display: none;
+  }
+
+  .footer-main {
+    @apply gap-8 px-4 py-10;
+  }
+  .footer-brand p {
+    @apply text-lg;
+  }
+  .footer-feed {
+    @apply max-w-none grid-cols-1 gap-3;
+  }
+  .footer-feed p {
+    @apply mt-3;
+  }
+  .footer-links {
+    @apply gap-2;
+  }
+  .footer-bottom-inner {
+    @apply gap-1 px-4 py-5 text-xs text-center;
   }
 }

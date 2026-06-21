@@ -149,7 +149,7 @@ function normalizeKickoffDate(value: string) {
 }
 
 function extractGroup(value = "") {
-  const match = value.match(/Group\s+([A-L])/i);
+  const match = value.match(/(?:Group|Grupo)\s+([A-L])/i);
   return match?.[1]?.toUpperCase() ?? "Knockout";
 }
 
@@ -180,7 +180,7 @@ function mapStatus(status: EspnCompetition["status"]) {
     return {
       finished: "FALSE",
       time_elapsed: "notstarted",
-      status_detail: status.type.detail || status.type.shortDetail || status.type.description || "Scheduled",
+      status_detail: status.type.detail || status.type.shortDetail || status.type.description || "Programado",
       period: status.period,
       clock: status.displayClock,
     };
@@ -189,7 +189,7 @@ function mapStatus(status: EspnCompetition["status"]) {
   return {
     finished: "FALSE",
     time_elapsed: status.displayClock || status.type.shortDetail || status.type.detail || "live",
-    status_detail: status.type.detail || status.type.shortDetail || status.type.description || "Live",
+      status_detail: status.type.detail || status.type.shortDetail || status.type.description || "En vivo",
     period: status.period,
     clock: status.displayClock,
   };
@@ -223,7 +223,7 @@ function normalizeEvents(details: EspnDetail[] | undefined): ApiGame["events"] {
       const athlete = detail.athletesInvolved?.[0];
       return {
         minute: detail.clock?.displayValue ?? "",
-        type: detail.type?.text ?? "Event",
+        type: detail.type?.text ?? "Evento",
         player: athlete?.displayName ?? athlete?.shortName ?? "Sin jugador",
         team_id: detail.team?.id,
         kind: eventKind(detail),
