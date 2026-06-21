@@ -25,7 +25,10 @@ function parseLocalDate(value: string) {
 }
 
 function formatIcsDate(value: Date) {
-  return value.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  return value
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "Z");
 }
 
 function escapeIcs(value: unknown) {
@@ -38,7 +41,7 @@ function escapeIcs(value: unknown) {
 
 function buildCalendarDescription(game: WorldCupPayload["games"][number]) {
   return [
-    `${game.home_team_name_en || game.home_team_label || "Home"} vs ${game.away_team_name_en || game.away_team_label || "Away"}`,
+    `${game.home_team_name_en || game.home_team_label || "Local"} vs ${game.away_team_name_en || game.away_team_label || "Visitante"}`,
     game.matchday,
     game.broadcasts?.length ? `TV: ${game.broadcasts.join(", ")}` : "",
     game.links?.[0]?.href ? `ESPN: ${game.links[0].href}` : "",
@@ -49,7 +52,9 @@ function buildCalendarDescription(game: WorldCupPayload["games"][number]) {
 
 function buildCalendarFile(payload: WorldCupPayload) {
   const games = [...payload.games].sort(
-    (a, b) => parseLocalDate(a.local_date).getTime() - parseLocalDate(b.local_date).getTime(),
+    (a, b) =>
+      parseLocalDate(a.local_date).getTime() -
+      parseLocalDate(b.local_date).getTime(),
   );
 
   const events = games.map((game) => {
@@ -61,7 +66,7 @@ function buildCalendarFile(payload: WorldCupPayload) {
       `DTSTAMP:${formatIcsDate(new Date())}`,
       `DTSTART:${formatIcsDate(start)}`,
       `DTEND:${formatIcsDate(end)}`,
-      `SUMMARY:${escapeIcs(`${game.home_team_name_en ?? game.home_team_label ?? "Home"} vs ${game.away_team_name_en ?? game.away_team_label ?? "Away"}`)}`,
+      `SUMMARY:${escapeIcs(`${game.home_team_name_en ?? game.home_team_label ?? "Local"} vs ${game.away_team_name_en ?? game.away_team_label ?? "Visitante"}`)}`,
       `DESCRIPTION:${escapeIcs(buildCalendarDescription(game))}`,
       `LOCATION:${escapeIcs(game.stadium_id)}`,
       "END:VEVENT",
@@ -74,7 +79,7 @@ function buildCalendarFile(payload: WorldCupPayload) {
     "PRODID:-//FutScore//World Cup 2026//ES",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    "X-WR-CALNAME:FIFA World Cup 2026",
+    "X-WR-CALNAME:Copa Mundial FIFA 2026",
     "X-WR-TIMEZONE:UTC",
     ...events,
     "END:VCALENDAR",

@@ -13,7 +13,12 @@ import Icon from "@/components/Icon.astro";
     <div class="ligamx-banner-inner">
       <div class="league-coming-grid">
         <article class="league-coming-card">
-          <img class="league-coming-logo league-coming-logo-wide" src="/ligamx-logo.png" alt="" aria-hidden="true" />
+          <img
+            class="league-coming-logo league-coming-logo-wide"
+            src="/ligamx-logo.png"
+            alt=""
+            aria-hidden="true"
+          />
           <div class="league-coming-copy">
             <span>Proximamente</span>
             <strong>Data de Liga MX</strong>
@@ -21,7 +26,12 @@ import Icon from "@/components/Icon.astro";
           </div>
         </article>
         <article class="league-coming-card">
-          <img class="league-coming-logo league-coming-logo-tall" src="/premier-league-logo.png" alt="" aria-hidden="true" />
+          <img
+            class="league-coming-logo league-coming-logo-tall"
+            src="/premier-league-logo.png"
+            alt=""
+            aria-hidden="true"
+          />
           <div class="league-coming-copy">
             <span>Proximamente</span>
             <strong>Data de Premier League</strong>
@@ -36,7 +46,8 @@ import Icon from "@/components/Icon.astro";
         aria-expanded="true"
         aria-controls="ligamx-banner"
       >
-        Minimizar
+        <span id="banner-toggle-text">Minimizar</span>
+        <span id="banner-countdown">15s</span>
       </button>
     </div>
   </section>
@@ -70,7 +81,7 @@ import Icon from "@/components/Icon.astro";
         <a href="#matches" data-section-link="matches">Partidos</a>
         <a href="#bracket" data-section-link="bracket">Llave</a>
         <a href="#groups">Grupos</a>
-        <a href="#match-detail">Detalle</a>
+        <a href="#match-detail" data-section-link="detail">Detalle</a>
       </nav>
 
       <nav id="mobile-menu" class="mobile-menu" aria-label="Menu movil" hidden>
@@ -78,7 +89,7 @@ import Icon from "@/components/Icon.astro";
           <Icon name="list" cls="inline-icon" size={18} />
           <span>Partidos</span>
         </a>
-        <a href="#groups">
+        <a href="#groups" data-section-link="groups">
           <Icon name="table" cls="inline-icon" size={18} />
           <span>Grupos</span>
         </a>
@@ -86,7 +97,7 @@ import Icon from "@/components/Icon.astro";
           <Icon name="git-branch" cls="inline-icon" size={18} />
           <span>Llave</span>
         </a>
-        <a href="#match-detail">
+        <a href="#match-detail" data-section-link="detail">
           <Icon name="info" cls="inline-icon" size={18} />
           <span>Detalle</span>
         </a>
@@ -97,22 +108,36 @@ import Icon from "@/components/Icon.astro";
   <main class="score-layout">
     <aside class="left-rail">
       <section class="panel league-panel">
-        <h2>FIFA World Cup</h2>
-        <a class="league-link active" href="#matches" data-section-link="matches"
+        <h2>Copa Mundial FIFA</h2>
+        <a
+          class="league-link active"
+          href="#matches"
+          data-section-link="matches"
           ><span><Icon name="list" cls="inline-icon" size={16} /></span> Partidos</a
         >
-        <a class="league-link" href="#groups"><span><Icon name="table" cls="inline-icon" size={16} /></span> Grupos</a>
-        <a class="league-link" href="#bracket" data-section-link="bracket"><span><Icon name="git-branch" cls="inline-icon" size={16} /></span> Llave</a>
-        <a class="league-link" href="#match-detail"
+        <a class="league-link" href="#groups" aria-disabled="true"
+          ><span><Icon name="table" cls="inline-icon" size={16} /></span> Grupos</a
+        >
+        <a class="league-link" href="#bracket" data-section-link="bracket"
+          ><span><Icon name="git-branch" cls="inline-icon" size={16} /></span> Llave</a
+        >
+        <a
+          class="league-link xl:pointer-events-none xl:opacity-40"
+          href="#match-detail"
+          data-section-link="detail"
           ><span><Icon name="info" cls="inline-icon" size={16} /></span> Detalle seleccionado</a
         >
       </section>
 
-      <section id="groups" class="panel standings-shell side-standings" aria-label="Grupos del Mundial">
+      <section
+        id="groups"
+        class="panel standings-shell side-standings"
+        aria-label="Grupos del Mundial"
+      >
         <div class="section-title">
           <div>
-            <h2>FIFA World Cup</h2>
-            <p>Grupos calculados</p>
+            <h2>Grupos calculados</h2>
+            <p></p>
           </div>
           <span>A-L</span>
         </div>
@@ -142,12 +167,12 @@ import Icon from "@/components/Icon.astro";
           <Icon name="chevron-down" cls="inline-icon" size={16} />
         </button>
         <div id="match-filters" class="filter-row">
-          <button class="chip" data-view="live">En vivo</button>
-          <button class="chip" data-view="today">Hoy</button>
-          <button class="chip" data-view="all" data-active="true">Todos</button>
           <select id="group-filter" aria-label="Filtrar grupo">
             <option value="all">Todos los grupos</option>
           </select>
+          <button class="chip" data-view="live">En vivo</button>
+          <button class="chip" data-view="today">Hoy</button>
+          <button class="chip" data-view="all" data-active="true">Todos</button>
           <button
             id="refresh"
             class="refresh-btn"
@@ -175,15 +200,31 @@ import Icon from "@/components/Icon.astro";
         </div>
         <div id="knockout-bracket" class="bracket-board"></div>
       </section>
+
+      <section id="detail-mobile" class="panel" hidden></section>
+
+      <section
+        id="feed-groups"
+        class="panel standings-shell"
+        aria-label="Grupos del Mundial"
+        hidden
+      >
+        <div class="section-title">
+          <div>
+            <h2>Grupos</h2>
+            <p>Tabla de posiciones</p>
+          </div>
+          <span>A-L</span>
+        </div>
+        <div class="standings-grid" data-groups-grid></div>
+      </section>
     </section>
 
     <aside class="right-rail">
       <section class="panel detail-widget selected-match-widget">
         <div id="match-detail"></div>
       </section>
-
     </aside>
-
   </main>
 
   <footer class="site-footer">
@@ -197,9 +238,14 @@ import Icon from "@/components/Icon.astro";
       <nav class="footer-links" aria-label="Secciones de la app">
         <h2>Secciones</h2>
         <a href="#matches" data-section-link="matches">Partidos</a>
-        <a href="#groups">Grupos</a>
+        <a href="#groups" class="lg:pointer-events-none lg:opacity-40">Grupos</a
+        >
         <a href="#bracket" data-section-link="bracket">Llave</a>
-        <a href="#match-detail">Detalle seleccionado</a>
+        <a
+          href="#match-detail"
+          class="xl:pointer-events-none xl:opacity-40"
+          data-section-link="detail">Detalle seleccionado</a
+        >
       </nav>
 
       <section class="footer-feed" aria-label="Estado del feed">
