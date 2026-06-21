@@ -102,6 +102,7 @@ const stageLabels: Record<string, string> = {
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let isManualRefresh = false;
 const POLL_INTERVAL = 20000;
+let liveTimerInterval: ReturnType<typeof setInterval> | null = null;
 
 function scheduleNextPoll() {
   if (pollTimer) clearTimeout(pollTimer);
@@ -112,6 +113,39 @@ function cancelPoll() {
   if (pollTimer) {
     clearTimeout(pollTimer);
     pollTimer = null;
+  }
+}
+
+function startLiveTimer() {
+  if (liveTimerInterval) return;
+  liveTimerInterval = setInterval(() => {
+    const liveGames = state.payload.games.filter((g) => getStatus(g) === "live");
+    if (!liveGames.length) {
+      clearInterval(liveTimerInterval!);
+      liveTimerInterval = null;
+      return;
+    }
+    updateLiveTimers();
+  }, 60000);
+}
+
+function updateLiveTimers() {
+  document.querySelectorAll<HTMLSpanElement>(".minute-pill.status-live").forEach((el) => {
+    const btn = el.closest<HTMLButtonElement>(".match-card, .bracket-game");
+    const matchId = btn?.dataset.matchId;
+    if (!matchId) return;
+    const game = state.payload.games.find((g) => g.id === matchId);
+    if (game && getStatus(game) === "live") {
+      el.textContent = escapeHtml(String(game.time_elapsed));
+    }
+  });
+
+  const detailTimerEl = document.querySelector<HTMLSpanElement>(".selected-live-time");
+  if (detailTimerEl) {
+    const selectedGame = state.payload.games.find((g) => g.id === state.selectedMatchId);
+    if (selectedGame && getStatus(selectedGame) === "live") {
+      detailTimerEl.textContent = escapeHtml(String(selectedGame.time_elapsed));
+    }
   }
 }
 
@@ -150,6 +184,7 @@ async function loadWorldCupData() {
     setDataStatus("Usando datos demo", "fallback");
   }
   render();
+  startLiveTimer();
   scheduleNextPoll();
 }
 
