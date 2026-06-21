@@ -93,6 +93,12 @@ type EspnCompetitor = {
   }>;
 };
 
+type EspnEventDetail = {
+  header?: {
+    competitions?: EspnCompetition[];
+  };
+};
+
 type EspnDetail = {
   type?: {
     text?: string;
@@ -397,6 +403,8 @@ async function getEspnPayload(): Promise<WorldCupPayload> {
   const url = new URL(ESPN_FIFA_WORLD_CUP_SCOREBOARD_URL);
   url.searchParams.set("dates", "20260611-20260719");
   url.searchParams.set("limit", "300");
+  url.searchParams.set("details", "true");
+  url.searchParams.set("groups", "80");
 
   const scoreboard = await fetchJson<EspnScoreboard>(url.toString(), {
     timeoutMs: 22000,
@@ -405,7 +413,49 @@ async function getEspnPayload(): Promise<WorldCupPayload> {
   });
   const payload = normalizeEspnPayload(scoreboard);
   if (!payload.games.length) throw new Error("ESPN returned an empty World Cup feed");
+  
+  const liveGames = payload.games.filter((g) => g.time_elapsed !== "notstarted" && g.time_elapsed !== "finished");
+  if (liveGames.length > 0) {
+    await enrichLiveGames(payload, liveGames);
+  }
+  
   return payload;
+}
+
+async function enrichLiveGames(payload: WorldCupPayload, liveGames: ApiGame[]) {
+  const detailPromises = liveGames.map(async (game) => {
+    try {
+      const detailUrl = `https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary?event=${game.id}&lang=es`;
+      const detail = await fetchJson<EspnEventDetail>(detailUrl, {
+        timeoutMs: 10000,
+        retries: 1,
+        retryDelay: (attempt) => attempt * 500,
+      });
+      if (detail?.header?.competitions?.[0]) {
+        const competition = detail.header.competitions[0];
+        const gameIndex = payload.games.findIndex((g) => g.id === game.id);
+        if (gameIndex >= 0) {
+          const status = mapStatus(competition.status);
+          const home = competition.competitors.find((c: EspnCompetitor) => c.homeAway === "home");
+          const away = competition.competitors.find((c: EspnCompetitor) => c.homeAway === "away");
+          
+          payload.games[gameIndex] = {
+            ...payload.games[gameIndex],
+            home_score: home?.score ?? payload.games[gameIndex].home_score,
+            away_score: away?.score ?? payload.games[gameIndex].away_score,
+            home_scorers: scorerText(competition.details, home?.id ?? ""),
+            away_scorers: scorerText(competition.details, away?.id ?? ""),
+            events: normalizeEvents(competition.details),
+            ...status,
+          };
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to enrich live game ${game.id}:`, error);
+    }
+  });
+  
+  await Promise.allSettled(detailPromises);
 }
 
 async function getWorldCup26Payload(): Promise<WorldCupPayload> {
