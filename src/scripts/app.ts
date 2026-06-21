@@ -5,6 +5,23 @@ import {
   type WorldCupPayload,
 } from "@/lib/worldcup26";
 import { icon } from "@/lib/icons";
+import {
+  parseLocalDate,
+  formatDate,
+  formatKickoffTime,
+  formatKickoffDateTime,
+  formatKickoffDateShort,
+  formatBracketDate,
+  formatMatchDayLabel,
+  isTodayGame as isToday,
+  isTodayOrFutureGame as isTodayOrFuture,
+  getDayKey,
+  sameDay,
+  addDays,
+  formatDateLabel,
+  formatMetaTime,
+} from "@/lib/date";
+import { fetchJson } from "@/lib/fetch";
 
 type MatchStatus = "live" | "finished" | "upcoming";
 type ActiveView = "all" | "live" | "today" | "date";
@@ -71,9 +88,6 @@ const ligaMxBannerEl = document.querySelector(
 const ligaMxBannerToggleEl = document.querySelector(
   "#ligamx-banner-toggle",
 ) as HTMLButtonElement | null;
-const bannerCountdownEl = document.querySelector(
-  "#banner-countdown",
-) as HTMLElement | null;
 
 const stageLabels: Record<string, string> = {
   group: "Grupos",
@@ -84,21 +98,6 @@ const stageLabels: Record<string, string> = {
   third: "3er lugar",
   final: "Final",
 };
-
-async function fetchJson<T>(path: string, timeoutMs = 14000): Promise<T> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(path, {
-      signal: controller.signal,
-      cache: "no-cache",
-    });
-    if (!response.ok) throw new Error(`${path} returned ${response.status}`);
-    return response.json() as Promise<T>;
-  } finally {
-    window.clearTimeout(timeout);
-  }
-}
 
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let isManualRefresh = false;
@@ -120,10 +119,12 @@ async function loadWorldCupData() {
   cancelPoll();
   setDataStatus("Conectando con ESPN...", "loading");
   try {
-    state.payload = await fetchJson<WorldCupPayload>(
-      "/api/worldcup.json",
-      26000,
-    );
+    state.payload = await fetchJson<WorldCupPayload>("/api/worldcup.json", {
+      timeoutMs: 26000,
+      retries: 2,
+      retryDelay: (attempt) => attempt * 1000,
+    });
+    clearStatusCache();
     if (isManualRefresh || !state.selectedByUser) {
       state.selectedMatchId = pickInitialMatchId();
       state.selectedByUser = false;
@@ -140,6 +141,7 @@ async function loadWorldCupData() {
   } catch (error) {
     console.warn(error);
     state.payload = fallbackPayload;
+    clearStatusCache();
     if (isManualRefresh || !state.selectedByUser) {
       state.selectedMatchId = pickInitialMatchId();
       state.selectedByUser = false;
@@ -179,14 +181,6 @@ function safeUrl(value: string) {
   }
 }
 
-function escapeIcs(value: unknown) {
-  return String(value ?? "")
-    .replace(/\\/g, "\\\\")
-    .replace(/\n/g, "\\n")
-    .replace(/,/g, "\\,")
-    .replace(/;/g, "\\;");
-}
-
 function getTeam(id: string) {
   return state.payload.teams.find((team) => team.id === id);
 }
@@ -209,136 +203,31 @@ function getTeamFlag(game: ApiGame, side: "home" | "away") {
   return direct || team?.flag || "";
 }
 
+const statusCache = new Map<string, MatchStatus>();
+
 function getStatus(game: ApiGame): MatchStatus {
+  const cached = statusCache.get(game.id);
+  if (cached) return cached;
+
   const elapsed = String(game.time_elapsed ?? "").toLowerCase();
+  let result: MatchStatus;
   if (
     String(game.finished).toUpperCase() === "TRUE" ||
     elapsed === "finished" ||
     elapsed === "ft"
   )
-    return "finished";
-  if (elapsed !== "notstarted" && elapsed !== "" && elapsed !== "null")
-    return "live";
-  return "upcoming";
+    result = "finished";
+  else if (elapsed !== "notstarted" && elapsed !== "" && elapsed !== "null")
+    result = "live";
+  else
+    result = "upcoming";
+
+  statusCache.set(game.id, result);
+  return result;
 }
 
-function parseLocalDate(value: string) {
-  if (/^\d{4}-\d{2}-\d{2}T/.test(value)) {
-    return new Date(value);
-  }
-
-  const [datePart, timePart = "00:00"] = value.split(" ");
-  const [month, day, year] = datePart.split("/").map(Number);
-  const [hours, minutes] = timePart.split(":").map(Number);
-  return new Date(year, month - 1, day, hours, minutes);
-}
-
-function formatIcsDate(value: Date) {
-  return value
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace(/\.\d{3}Z$/, "Z");
-}
-
-function formatDate(game: ApiGame) {
-  return new Intl.DateTimeFormat("es-MX", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(parseLocalDate(game.local_date));
-}
-
-function formatKickoffTime(game: ApiGame) {
-  return new Intl.DateTimeFormat("es-MX", {
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(parseLocalDate(game.local_date));
-}
-
-function formatKickoffDateTime(game: ApiGame) {
-  const date = parseLocalDate(game.local_date);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const hours24 = date.getHours();
-  const hours = hours24 % 12 || 12;
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const ampm = hours24 >= 12 ? "pm" : "am";
-  return `${day}/${month} ${hours}:${minutes} ${ampm}`;
-}
-
-function formatKickoffDateShort(game: ApiGame) {
-  const date = parseLocalDate(game.local_date);
-  const day = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `${day}/${month}`;
-}
-
-function formatBracketDate(game: ApiGame) {
-  return new Intl.DateTimeFormat("es-MX", {
-    month: "short",
-    day: "numeric",
-  }).format(parseLocalDate(game.local_date));
-}
-
-function formatMatchDayLabel(game: ApiGame) {
-  if (isToday(game)) return "Hoy";
-  return new Intl.DateTimeFormat("es-MX", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  }).format(parseLocalDate(game.local_date));
-}
-
-function isToday(game: ApiGame) {
-  const gameDate = parseLocalDate(game.local_date);
-  const now = new Date();
-  return (
-    gameDate.getFullYear() === now.getFullYear() &&
-    gameDate.getMonth() === now.getMonth() &&
-    gameDate.getDate() === now.getDate()
-  );
-}
-
-function isTodayOrFuture(game: ApiGame) {
-  const now = new Date();
-  const todayStart = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-  ).getTime();
-  return parseLocalDate(game.local_date).getTime() >= todayStart;
-}
-
-function getDayKey(value: Date) {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function sameDay(left: Date, right: Date) {
-  return (
-    left.getFullYear() === right.getFullYear() &&
-    left.getMonth() === right.getMonth() &&
-    left.getDate() === right.getDate()
-  );
-}
-
-function addDays(value: Date, days: number) {
-  const next = new Date(value);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function formatDateLabel(value: Date | null) {
-  if (!value) return "Mundial 2026";
-  return new Intl.DateTimeFormat("es-MX", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  }).format(value);
+function clearStatusCache() {
+  statusCache.clear();
 }
 
 function normalizeScorers(value?: string) {
@@ -360,6 +249,17 @@ function gameSearchText(game: ApiGame) {
   );
 }
 
+function matchesBaseFilters(game: ApiGame) {
+  if (state.activeGroup !== "all" && game.group !== state.activeGroup)
+    return false;
+  if (
+    state.query &&
+    !gameSearchText(game).includes(removeAccents(state.query.toLowerCase()))
+  )
+    return false;
+  return true;
+}
+
 function filteredGames() {
   const games = [...state.payload.games]
     .sort(sortGamesForCurrentView)
@@ -374,14 +274,7 @@ function filteredGames() {
         !sameDay(parseLocalDate(game.local_date), state.activeDate)
       )
         return false;
-      if (state.activeGroup !== "all" && game.group !== state.activeGroup)
-        return false;
-      if (
-        state.query &&
-        !gameSearchText(game).includes(removeAccents(state.query.toLowerCase()))
-      )
-        return false;
-      return true;
+      return matchesBaseFilters(game);
     });
 
   if (state.activeView !== "all") return games;
@@ -417,17 +310,7 @@ function sortGamesForCurrentView(a: ApiGame, b: ApiGame) {
 function getAllViewGames() {
   return [...state.payload.games]
     .sort(sortGamesForCurrentView)
-    .filter((game) => {
-      if (!isTodayOrFuture(game)) return false;
-      if (state.activeGroup !== "all" && game.group !== state.activeGroup)
-        return false;
-      if (
-        state.query &&
-        !gameSearchText(game).includes(removeAccents(state.query.toLowerCase()))
-      )
-        return false;
-      return true;
-    });
+    .filter((game) => isTodayOrFuture(game) && matchesBaseFilters(game));
 }
 
 function getVisibleDayKeys(games: ApiGame[]) {
@@ -580,56 +463,6 @@ function renderTvPanel(
   `;
 }
 
-function buildCalendarDescription(game: ApiGame) {
-  const stadium = getStadium(game.stadium_id);
-  const parts = [
-    `${getTeamName(game, "home")} vs ${getTeamName(game, "away")}`,
-    game.matchday,
-    stadium?.name_en ? `Venue: ${stadium.name_en}` : "",
-    game.broadcasts?.length ? `TV: ${game.broadcasts.join(", ")}` : "",
-    game.links?.[0]?.href ? `ESPN: ${game.links[0].href}` : "",
-  ].filter(Boolean);
-  return parts.join("\\n");
-}
-
-function buildCalendarFile() {
-  const now = formatIcsDate(new Date());
-  const games = [...state.payload.games].sort(
-    (a, b) =>
-      parseLocalDate(a.local_date).getTime() -
-      parseLocalDate(b.local_date).getTime(),
-  );
-  const events = games.map((game) => {
-    const start = parseLocalDate(game.local_date);
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-    const stadium = getStadium(game.stadium_id);
-    const title = `${getTeamName(game, "home")} vs ${getTeamName(game, "away")}`;
-    return [
-      "BEGIN:VEVENT",
-      `UID:futscore-${game.id}@futscore.local`,
-      `DTSTAMP:${now}`,
-      `DTSTART:${formatIcsDate(start)}`,
-      `DTEND:${formatIcsDate(end)}`,
-      `SUMMARY:${escapeIcs(title)}`,
-      `DESCRIPTION:${escapeIcs(buildCalendarDescription(game))}`,
-      `LOCATION:${escapeIcs(stadium?.name_en ?? stadium?.fifa_name ?? "Por confirmar")}`,
-      "END:VEVENT",
-    ].join("\r\n");
-  });
-
-  return [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//FutScore//World Cup 2026//ES",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
-    "X-WR-CALNAME:Copa Mundial FIFA 2026",
-    "X-WR-TIMEZONE:UTC",
-    ...events,
-    "END:VCALENDAR",
-  ].join("\r\n");
-}
-
 function isMobileViewport() {
   return window.innerWidth <= 1279;
 }
@@ -712,37 +545,6 @@ function renderMatches() {
       `
       : "");
 
-  document
-    .querySelectorAll<HTMLButtonElement>(".match-card")
-    .forEach((button) => {
-      button.addEventListener("click", () => {
-        state.selectedMatchId = button.dataset.matchId ?? state.selectedMatchId;
-        state.selectedByUser = true;
-        state.activeDetailTab = "facts";
-        if (isMobileViewport() && !isTableViewport()) {
-          state.activeSection = "detail";
-          state.mobileDetailOpen = false;
-          const matchGame = state.payload.games.find(
-            (g) => g.id === state.selectedMatchId,
-          );
-          if (matchGame?.group && matchGame.group !== "Knockout") {
-            state.activeGroup = matchGame.group;
-          }
-        } else {
-          state.mobileDetailOpen = false;
-        }
-        render();
-      });
-    });
-
-  const loadMoreButton =
-    matchesEl.querySelector<HTMLButtonElement>(".load-more-matches");
-  if (loadMoreButton) {
-    loadMoreButton.addEventListener("click", () => {
-      state.visibleDayCount += 3;
-      render();
-    });
-  }
 }
 
 function renderGroups() {
@@ -946,19 +748,6 @@ function renderKnockoutBracket() {
     </div>
   `;
 
-  knockoutEl
-    .querySelectorAll<HTMLButtonElement>(".bracket-game")
-    .forEach((button) => {
-      button.addEventListener("click", () => {
-        state.selectedMatchId = button.dataset.matchId ?? state.selectedMatchId;
-        state.selectedByUser = true;
-        state.activeDetailTab = "facts";
-        if (isMobileViewport() && !isTableViewport()) {
-          state.mobileDetailOpen = true;
-        }
-        render();
-      });
-    });
 }
 
 function renderBracketSlot(
@@ -1193,26 +982,6 @@ function renderDetail() {
     detailEl.innerHTML = detailHtml;
   }
 
-  document
-    .querySelectorAll<HTMLButtonElement>("[data-detail-tab]")
-    .forEach((button) => {
-      button.addEventListener("click", () => {
-        state.activeDetailTab =
-          (button.dataset.detailTab as DetailTab) ?? "facts";
-        renderDetail();
-      });
-    });
-
-  const closeButton = (
-    showInlineDetail ? detailMobileEl : detailEl
-  )?.querySelector<HTMLButtonElement>(".detail-close");
-  if (closeButton) {
-    closeButton.addEventListener("click", () => {
-      resetAllFilters();
-      render();
-    });
-  }
-
   if (rootEl) {
     rootEl.dataset.mobileDetailOpen = String(
       isMobileViewport() && !isTableViewport() && state.mobileDetailOpen,
@@ -1221,11 +990,7 @@ function renderDetail() {
 }
 
 function renderMeta() {
-  updatedEl.textContent = new Intl.DateTimeFormat("es-MX", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(new Date(state.payload.updatedAt));
+  updatedEl.textContent = formatMetaTime(new Date(state.payload.updatedAt));
   const sourceLabel: Record<WorldCupPayload["source"], string> = {
     espn: "ESPN publico",
     worldcup26: "worldcup26.ir",
@@ -1487,6 +1252,76 @@ window.addEventListener("resize", () => {
 
   lastViewportWidth = currentWidth;
 });
+
+function initEventDelegation() {
+  matchesEl.addEventListener("click", (event) => {
+    const matchCard = (event.target as HTMLElement).closest<HTMLButtonElement>(".match-card");
+    if (matchCard) {
+      state.selectedMatchId = matchCard.dataset.matchId ?? state.selectedMatchId;
+      state.selectedByUser = true;
+      state.activeDetailTab = "facts";
+      if (isMobileViewport() && !isTableViewport()) {
+        state.activeSection = "detail";
+        state.mobileDetailOpen = false;
+        const matchGame = state.payload.games.find(
+          (g) => g.id === state.selectedMatchId,
+        );
+        if (matchGame?.group && matchGame.group !== "Knockout") {
+          state.activeGroup = matchGame.group;
+        }
+      } else {
+        state.mobileDetailOpen = false;
+      }
+      render();
+      return;
+    }
+
+    const loadMoreButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".load-more-matches");
+    if (loadMoreButton) {
+      state.visibleDayCount += 3;
+      render();
+    }
+  });
+
+  knockoutEl.addEventListener("click", (event) => {
+    const bracketGame = (event.target as HTMLElement).closest<HTMLButtonElement>(".bracket-game");
+    if (bracketGame) {
+      state.selectedMatchId = bracketGame.dataset.matchId ?? state.selectedMatchId;
+      state.selectedByUser = true;
+      state.activeDetailTab = "facts";
+      if (isMobileViewport() && !isTableViewport()) {
+        state.mobileDetailOpen = true;
+      }
+      render();
+    }
+  });
+
+  const handleDetailTabClick = (event: Event) => {
+    const tabButton = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-detail-tab]");
+    if (tabButton) {
+      state.activeDetailTab = (tabButton.dataset.detailTab as DetailTab) ?? "facts";
+      renderDetail();
+    }
+  };
+  detailEl.addEventListener("click", handleDetailTabClick);
+  if (detailMobileEl) {
+    detailMobileEl.addEventListener("click", handleDetailTabClick);
+  }
+
+  const handleDetailCloseClick = (event: Event) => {
+    const closeButton = (event.target as HTMLElement).closest<HTMLButtonElement>(".detail-close");
+    if (closeButton) {
+      resetAllFilters();
+      render();
+    }
+  };
+  detailEl.addEventListener("click", handleDetailCloseClick);
+  if (detailMobileEl) {
+    detailMobileEl.addEventListener("click", handleDetailCloseClick);
+  }
+}
+
+initEventDelegation();
 
 state.selectedMatchId = pickInitialMatchId();
 render();
