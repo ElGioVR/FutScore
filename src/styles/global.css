@@ -1237,6 +1237,10 @@
 }
 
 @media (max-width: 1279px) {
+  .bracket-shell {
+    @apply hidden;
+  }
+
   .detail-close {
     @apply inline-flex bg-[#3a3a3a] text-white;
   }
@@ -1284,10 +1288,6 @@
 }
 
 @media (max-width: 767px) {
-  .bracket-shell {
-    @apply hidden;
-  }
-
   .ligamx-banner-inner {
     @apply grid-cols-1 gap-3;
   }

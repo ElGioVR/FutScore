@@ -1009,7 +1009,7 @@ function renderActiveSection() {
   const isTablet = isTableViewport();
   const isPhone = isMobile && !isTablet;
   matchesEl.hidden = state.activeSection !== "matches";
-  bracketShellEl.hidden = state.activeSection !== "bracket" || isPhone;
+  bracketShellEl.hidden = state.activeSection !== "bracket" || isMobile;
 
   if (feedGroupsEl) {
     feedGroupsEl.hidden = !(
