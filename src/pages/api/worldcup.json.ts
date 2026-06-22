@@ -449,10 +449,13 @@ async function getWorldCup26Payload(): Promise<WorldCupPayload> {
 export async function GET() {
   try {
     const payload = await getEspnPayload();
+    const hasLive = payload.games.some(
+      (g) => g.time_elapsed !== "notstarted" && g.time_elapsed !== "finished",
+    );
     return Response.json(payload, {
-      headers: {
-        "cache-control": "s-maxage=10, stale-while-revalidate=30",
-      },
+      headers: hasLive
+        ? { "cache-control": "no-store, no-cache, must-revalidate" }
+        : { "cache-control": "s-maxage=30, stale-while-revalidate=60" },
     });
   } catch (espnError) {
     console.warn("ESPN unavailable; trying worldcup26.", espnError instanceof Error ? espnError.message : espnError);
@@ -461,9 +464,7 @@ export async function GET() {
   try {
     const payload = await getWorldCup26Payload();
     return Response.json(payload, {
-      headers: {
-        "cache-control": "s-maxage=20, stale-while-revalidate=120",
-      },
+      headers: { "cache-control": "s-maxage=30, stale-while-revalidate=60" },
     });
   } catch (worldCup26Error) {
     console.warn("World Cup feeds unavailable; using fallback data.", worldCup26Error instanceof Error ? worldCup26Error.message : worldCup26Error);

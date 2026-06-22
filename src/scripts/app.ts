@@ -119,11 +119,10 @@ async function loadWorldCupData() {
   cancelPoll();
   setDataStatus("Conectando con ESPN...", "loading");
   try {
-    state.payload = await fetchJson<WorldCupPayload>("/api/worldcup.json", {
-      timeoutMs: 26000,
-      retries: 2,
-      retryDelay: (attempt) => attempt * 1000,
-    });
+    state.payload = await fetchJson<WorldCupPayload>(
+      `/api/worldcup.json?t=${Date.now()}`,
+      { timeoutMs: 26000, retries: 2, retryDelay: (attempt) => attempt * 1000 },
+    );
     clearStatusCache();
     if (isManualRefresh || !state.selectedByUser) {
       state.selectedMatchId = pickInitialMatchId();
