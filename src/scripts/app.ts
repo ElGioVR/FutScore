@@ -28,6 +28,12 @@ type ActiveView = "all" | "live" | "today" | "date";
 type ActiveSection = "matches" | "bracket" | "groups" | "detail";
 type DetailTab = "facts" | "events" | "tv";
 
+const POLL_INTERVAL = 20000;
+const FETCH_TIMEOUT = 26000;
+const DEFAULT_VISIBLE_DAYS = 3;
+const BREAKPOINT_MOBILE = 1279;
+const BREAKPOINT_DESKTOP = 1024;
+
 const state: {
   payload: WorldCupPayload;
   activeView: ActiveView;
@@ -44,7 +50,7 @@ const state: {
   payload: fallbackPayload,
   activeView: "all",
   activeGroup: "all",
-  visibleDayCount: 3,
+  visibleDayCount: DEFAULT_VISIBLE_DAYS,
   selectedMatchId: null,
   query: "",
   activeDate: new Date(),
@@ -101,7 +107,14 @@ const stageLabels: Record<string, string> = {
 
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let isManualRefresh = false;
-const POLL_INTERVAL = 20000;
+
+function resetSelectedMatchIfNeeded() {
+  if (isManualRefresh || !state.selectedByUser) {
+    state.selectedMatchId = pickInitialMatchId();
+    state.selectedByUser = false;
+  }
+  isManualRefresh = false;
+}
 
 function scheduleNextPoll() {
   if (pollTimer) clearTimeout(pollTimer);
@@ -121,14 +134,10 @@ async function loadWorldCupData() {
   try {
     state.payload = await fetchJson<WorldCupPayload>(
       `/api/worldcup.json?t=${Date.now()}`,
-      { timeoutMs: 26000, retries: 2, retryDelay: (attempt) => attempt * 1000 },
+      { timeoutMs: FETCH_TIMEOUT, retries: 2, retryDelay: (attempt) => attempt * 1000 },
     );
     clearStatusCache();
-    if (isManualRefresh || !state.selectedByUser) {
-      state.selectedMatchId = pickInitialMatchId();
-      state.selectedByUser = false;
-    }
-    isManualRefresh = false;
+    resetSelectedMatchIfNeeded();
     setDataStatus(
       state.payload.source === "espn"
         ? "Marcadores, eventos y TV en vivo"
@@ -141,11 +150,7 @@ async function loadWorldCupData() {
     console.warn(error);
     state.payload = fallbackPayload;
     clearStatusCache();
-    if (isManualRefresh || !state.selectedByUser) {
-      state.selectedMatchId = pickInitialMatchId();
-      state.selectedByUser = false;
-    }
-    isManualRefresh = false;
+    resetSelectedMatchIfNeeded();
     setDataStatus("Usando datos demo", "fallback");
   }
   render();
@@ -259,13 +264,14 @@ function matchesBaseFilters(game: ApiGame) {
 }
 
 function filteredGames() {
+  const isSearching = Boolean(state.query);
   const games = [...state.payload.games]
     .sort(sortGamesForCurrentView)
     .filter((game) => {
       const status = getStatus(game);
       if (state.activeView === "live" && status !== "live") return false;
       if (state.activeView === "today" && !isToday(game)) return false;
-      if (state.activeView === "all" && !isTodayOrFuture(game)) return false;
+      if (state.activeView === "all" && !isSearching && !isTodayOrFuture(game)) return false;
       if (
         state.activeView === "date" &&
         state.activeDate &&
@@ -276,6 +282,17 @@ function filteredGames() {
     });
 
   if (state.activeView !== "all") return games;
+
+  if (isSearching) {
+    const now = Date.now();
+    const upcoming = games
+      .filter((g) => parseLocalDate(g.local_date).getTime() >= now || isToday(g))
+      .sort((a, b) => parseLocalDate(a.local_date).getTime() - parseLocalDate(b.local_date).getTime());
+    const past = games
+      .filter((g) => parseLocalDate(g.local_date).getTime() < now && !isToday(g))
+      .sort((a, b) => parseLocalDate(b.local_date).getTime() - parseLocalDate(a.local_date).getTime());
+    return [...upcoming, ...past];
+  }
 
   const visibleDays = getVisibleDayKeys(games);
   return games.filter((game) =>
@@ -323,10 +340,9 @@ function getVisibleDayKeys(games: ApiGame[]) {
 
 function hasMoreAllViewDays() {
   if (state.activeView !== "all") return false;
-  const days = new Set(
-    getAllViewGames().map((game) => getDayKey(parseLocalDate(game.local_date))),
-  );
-  return days.size > state.visibleDayCount;
+  const allGames = getAllViewGames();
+  const visibleGames = filteredGames();
+  return visibleGames.length < allGames.length;
 }
 
 function groupMatchesQuery(group: string, query: string) {
@@ -342,15 +358,12 @@ function groupMatchesQuery(group: string, query: string) {
 function visibleGroupsForCurrentContext() {
   if (state.activeGroup !== "all") return new Set([state.activeGroup]);
 
-  const hasActiveFilters = Boolean(state.query);
-  if (hasActiveFilters) {
+  if (state.query) {
     const visibleGroups = new Set<string>();
-    if (state.query) {
-      state.payload.teams.forEach((team) => {
-        if (team.groups && groupMatchesQuery(team.groups, state.query))
-          visibleGroups.add(team.groups);
-      });
-    }
+    state.payload.teams.forEach((team) => {
+      if (team.groups && groupMatchesQuery(team.groups, state.query))
+        visibleGroups.add(team.groups);
+    });
     return visibleGroups;
   }
 
@@ -462,11 +475,11 @@ function renderTvPanel(
 }
 
 function isMobileViewport() {
-  return window.innerWidth <= 1279;
+  return window.innerWidth <= BREAKPOINT_MOBILE;
 }
 
 function isTableViewport() {
-  return window.innerWidth >= 1024 && window.innerWidth <= 1279;
+  return window.innerWidth >= BREAKPOINT_DESKTOP && window.innerWidth <= BREAKPOINT_MOBILE;
 }
 
 function renderMatches() {
@@ -488,17 +501,30 @@ function renderMatches() {
     return acc;
   }, {});
 
+  const isSearching = Boolean(state.query);
+  const now = Date.now();
+
+  const groupedEntries = Object.entries(grouped);
+
   matchesEl.innerHTML =
-    Object.entries(grouped)
-      .map(
-        ([groupName, groupGames]) => `
-      <section class="league-card">
-        <div class="league-card-header">
-          <span><span aria-hidden="true">CM</span> Copa Mundial FIFA</span>
-          <span>${groupGames.length} partidos</span>
-        </div>
-        <span class="group-label">${escapeHtml(groupName)}</span>
-        ${groupGames
+    groupedEntries
+      .map(([groupName, groupGames], idx) => {
+        const isPastGroup =
+          isSearching &&
+          groupGames.every((g) => {
+            const t = parseLocalDate(g.local_date).getTime();
+            return t < now && !isToday(g);
+          });
+        const prevIsPast =
+          isSearching &&
+          idx > 0 &&
+          groupedEntries[idx - 1][1].every((g) => {
+            const t = parseLocalDate(g.local_date).getTime();
+            return t < now && !isToday(g);
+          });
+        const showDivider = isSearching && isPastGroup && !prevIsPast;
+
+        const gamesHtml = groupGames
           .map((game) => {
             const selected = game.id === state.selectedMatchId;
             const homeFlag = getTeamFlag(game, "home");
@@ -527,13 +553,21 @@ function renderMatches() {
                 <span>${escapeHtml(getTeamName(game, "away"))}</span>
               </span>
               <span class="row-icons" aria-hidden="true">${game.broadcasts?.length ? icon("tv", "inline-icon", 16) : ""}</span>
-            </button>
-          `;
+            </button>`;
           })
-          .join("")}
-      </section>
-    `,
-      )
+          .join("");
+
+        return `
+      ${showDivider ? `<div class="search-divider"><span>Partidos jugados</span></div>` : ""}
+      <section class="league-card">
+        <div class="league-card-header">
+          <span><span aria-hidden="true">CM</span> Copa Mundial FIFA</span>
+          <span>${groupGames.length} partidos</span>
+        </div>
+        <span class="group-label">${escapeHtml(groupName)}</span>
+        ${gamesHtml}
+      </section>`;
+      })
       .join("") +
     (hasMoreAllViewDays()
       ? `
@@ -840,6 +874,24 @@ function renderDetail() {
   const broadcasts = game.broadcasts ?? [];
   const links = game.links ?? [];
   const events = game.events ?? [];
+  const goalEvents = events.filter((e) => e.kind === "goal");
+
+  const homeGoals = goalEvents
+    .filter((e) => e.team_id === game.home_team_id)
+    .sort((a, b) => Number(a.minute) - Number(b.minute));
+  const awayGoals = goalEvents
+    .filter((e) => e.team_id === game.away_team_id)
+    .sort((a, b) => Number(a.minute) - Number(b.minute));
+
+  const goalLine = (e: (typeof goalEvents)[number]) =>
+    `<span class="goal-line">${escapeHtml(e.player)} ${escapeHtml(e.minute)}' ${icon("soccer", "inline-icon", 13)}</span>`;
+
+  const homeGoalsHtml = homeGoals.length
+    ? homeGoals.map(goalLine).join("")
+    : "";
+  const awayGoalsHtml = awayGoals.length
+    ? awayGoals.map(goalLine).join("")
+    : "";
   const statusText =
     status === "finished"
       ? "Finalizado"
@@ -943,6 +995,7 @@ function renderDetail() {
         <div class="selected-team">
           ${homeFlag ? `<img src="${safeUrl(homeFlag)}" alt="">` : ""}
           <strong>${escapeHtml(getTeamName(game, "home"))}</strong>
+          ${homeGoalsHtml ? `<div class="team-goals team-goals-desktop">${homeGoalsHtml}</div>` : ""}
         </div>
 
         <div class="selected-score" data-status="${status}">
@@ -953,8 +1006,17 @@ function renderDetail() {
         <div class="selected-team">
           ${awayFlag ? `<img src="${safeUrl(awayFlag)}" alt="">` : ""}
           <strong>${escapeHtml(getTeamName(game, "away"))}</strong>
+          ${awayGoalsHtml ? `<div class="team-goals team-goals-desktop">${awayGoalsHtml}</div>` : ""}
         </div>
       </div>
+
+      ${(homeGoalsHtml || awayGoalsHtml) ? `
+      <div class="selected-goals-mobile">
+        <div class="goals-side goals-left">${homeGoalsHtml}</div>
+        <div class="goals-center">${goalEvents.length ? icon("soccer", "inline-icon", 16) : ""}</div>
+        <div class="goals-side goals-right">${awayGoalsHtml}</div>
+      </div>
+      ` : ""}
 
       <div class="selected-tabs" role="tablist" aria-label="Detalle del partido">
         <button type="button" data-detail-tab="facts" data-active="${state.activeDetailTab === "facts"}" role="tab" aria-selected="${state.activeDetailTab === "facts"}">Datos</button>
@@ -1012,24 +1074,23 @@ function renderActiveSection() {
   matchesEl.hidden = state.activeSection !== "matches";
   bracketShellEl.hidden = state.activeSection !== "bracket";
 
+  if (dateCardEl) {
+    const hideFilters = ["detail", "groups", "bracket"].includes(state.activeSection);
+    dateCardEl.hidden = hideFilters;
+  }
+
   const sidebarGroupsEl = document.getElementById("groups");
   if (sidebarGroupsEl) {
-    sidebarGroupsEl.hidden = isPhone || state.activeSection !== "groups";
+    sidebarGroupsEl.hidden = isPhone;
   }
 
   if (mobileMenuToggleEl) {
-    const hideHamburger =
-      window.innerWidth >= 1024 ||
-      state.activeSection === "groups" ||
-      state.activeSection === "detail";
+    const hideHamburger = window.innerWidth >= BREAKPOINT_DESKTOP || state.activeSection === "detail";
     mobileMenuToggleEl.style.display = hideHamburger ? "none" : "";
   }
 
   if (feedGroupsEl) {
-    feedGroupsEl.hidden = !(
-      (state.activeSection === "detail" && isPhone) ||
-      (state.activeSection === "groups" && isPhone)
-    );
+    feedGroupsEl.hidden = !isPhone || (state.activeSection !== "detail" && state.activeSection !== "groups");
   }
 
   if (detailMobileEl) {
@@ -1064,7 +1125,7 @@ function resetAllFilters() {
   state.activeSection = "matches";
   state.activeView = "all";
   state.activeGroup = "all";
-  state.visibleDayCount = 3;
+  state.visibleDayCount = DEFAULT_VISIBLE_DAYS;
   state.selectedMatchId = pickInitialMatchId();
   state.query = "";
   state.activeDate = null;
@@ -1073,6 +1134,23 @@ function resetAllFilters() {
   state.selectedByUser = false;
   groupFilterEl.value = "all";
   searchEl.value = "";
+}
+
+function resetAndRender() {
+  resetAllFilters();
+  render();
+}
+
+function selectMatchForDetail(gameId: string, byUser: boolean) {
+  state.selectedMatchId = gameId;
+  state.selectedByUser = byUser;
+  state.activeDetailTab = "facts";
+  state.activeSection = "detail";
+  state.mobileDetailOpen = false;
+  const game = state.payload.games.find((g) => g.id === gameId);
+  if (game?.group && game.group !== "Knockout") {
+    state.activeGroup = game.group;
+  }
 }
 
 function render() {
@@ -1096,14 +1174,7 @@ sectionLinks.forEach((link) => {
       link.getAttribute("href") ?? "#matches",
     );
     if (state.activeSection === "detail") {
-      state.selectedMatchId = pickInitialMatchId();
-      state.selectedByUser = false;
-      const detailGame = state.payload.games.find(
-        (g) => g.id === state.selectedMatchId,
-      );
-      if (detailGame?.group && detailGame.group !== "Knockout") {
-        state.activeGroup = detailGame.group;
-      }
+      selectMatchForDetail(pickInitialMatchId(), false);
     }
     setMobileMenuOpen(false);
     render();
@@ -1200,7 +1271,7 @@ document
       } else {
         state.activeSection = "matches";
         state.activeView = nextView;
-        state.visibleDayCount = 3;
+        state.visibleDayCount = DEFAULT_VISIBLE_DAYS;
         state.activeDate = state.activeView === "today" ? new Date() : null;
       }
       document
@@ -1215,7 +1286,7 @@ document
 dateButtons.forEach((button, index) => {
   button.addEventListener("click", () => {
     state.activeSection = "matches";
-    state.visibleDayCount = 3;
+    state.visibleDayCount = DEFAULT_VISIBLE_DAYS;
     const direction = index === 0 ? -1 : 1;
     state.activeDate = addDays(state.activeDate ?? new Date(), direction);
     state.activeView = "date";
@@ -1230,7 +1301,7 @@ dateButtons.forEach((button, index) => {
 
 groupFilterEl.addEventListener("change", () => {
   state.activeSection = "matches";
-  state.visibleDayCount = 3;
+  state.visibleDayCount = DEFAULT_VISIBLE_DAYS;
   state.activeGroup = groupFilterEl.value;
   state.selectedByUser = false;
   render();
@@ -1239,7 +1310,7 @@ groupFilterEl.addEventListener("change", () => {
 searchEl.addEventListener("input", () => {
   if (state.activeSection !== "groups") {
     state.activeSection = "matches";
-    state.visibleDayCount = 3;
+    state.visibleDayCount = DEFAULT_VISIBLE_DAYS;
   }
   state.query = searchEl.value.trim();
   state.selectedByUser = false;
@@ -1260,8 +1331,8 @@ $("#refresh").addEventListener("click", () => {
 let lastViewportWidth = window.innerWidth;
 window.addEventListener("resize", () => {
   const currentWidth = window.innerWidth;
-  const wasMobile = lastViewportWidth <= 1279;
-  const isNowDesktop = currentWidth > 1279;
+  const wasMobile = lastViewportWidth <= BREAKPOINT_MOBILE;
+  const isNowDesktop = currentWidth > BREAKPOINT_MOBILE;
 
   if (wasMobile && isNowDesktop) {
     state.mobileDetailOpen = false;
@@ -1269,10 +1340,7 @@ window.addEventListener("resize", () => {
   }
 
   if (mobileMenuToggleEl) {
-    const hideHamburger =
-      currentWidth >= 1024 ||
-      state.activeSection === "groups" ||
-      state.activeSection === "detail";
+    const hideHamburger = currentWidth >= BREAKPOINT_DESKTOP || state.activeSection === "detail";
     mobileMenuToggleEl.style.display = hideHamburger ? "none" : "";
   }
 
@@ -1286,20 +1354,14 @@ function initEventDelegation() {
       ".match-card",
     );
     if (matchCard) {
-      state.selectedMatchId =
-        matchCard.dataset.matchId ?? state.selectedMatchId;
-      state.selectedByUser = true;
-      state.activeDetailTab = "facts";
+      const matchId = matchCard.dataset.matchId ?? state.selectedMatchId;
+      if (!matchId) return;
       if (isMobileViewport()) {
-        state.activeSection = "detail";
-        state.mobileDetailOpen = false;
-        const matchGame = state.payload.games.find(
-          (g) => g.id === state.selectedMatchId,
-        );
-        if (matchGame?.group && matchGame.group !== "Knockout") {
-          state.activeGroup = matchGame.group;
-        }
+        selectMatchForDetail(matchId, true);
       } else {
+        state.selectedMatchId = matchId;
+        state.selectedByUser = true;
+        state.activeDetailTab = "facts";
         state.mobileDetailOpen = false;
       }
       render();
@@ -1351,8 +1413,7 @@ function initEventDelegation() {
       event.target as HTMLElement
     ).closest<HTMLButtonElement>(".detail-close");
     if (closeButton) {
-      resetAllFilters();
-      render();
+      resetAndRender();
     }
   };
   detailEl.addEventListener("click", handleDetailCloseClick);
@@ -1362,14 +1423,12 @@ function initEventDelegation() {
 
   const bracketBackEl = document.getElementById("bracket-back");
   bracketBackEl?.addEventListener("click", () => {
-    resetAllFilters();
-    render();
+    resetAndRender();
   });
 
   const groupsBackEl = document.getElementById("groups-back");
   groupsBackEl?.addEventListener("click", () => {
-    resetAllFilters();
-    render();
+    resetAndRender();
   });
 }
 

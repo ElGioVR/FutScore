@@ -18,7 +18,7 @@ export function icon(name: string, className = "", size = 16) {
     case "plus":
       return `<svg ${common} class="${className}"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
     case "soccer":
-      return `<svg ${common} class="${className}"><circle cx="12" cy="12" r="9"></circle><path d="M12 3l2.3 4.6L19 9l-3 3 .7 5L12 15l-4.7 2L8 12 5 9l4.7-1.4L12 3z"></path></svg>`;
+      return `<svg ${common} class="${className}"><circle cx="12" cy="12" r="10" stroke-width="1.5"></circle><polygon points="12,5.5 14.8,8.8 13.6,12.8 10.4,12.8 9.2,8.8" fill="currentColor" opacity="0.85"></polygon><line x1="12" y1="2" x2="12" y2="5.5" stroke-width="1.2"></line><line x1="19.4" y1="7.2" x2="14.8" y2="8.8" stroke-width="1.2"></line><line x1="18.6" y1="16.4" x2="13.6" y2="12.8" stroke-width="1.2"></line><line x1="5.4" y1="16.4" x2="10.4" y2="12.8" stroke-width="1.2"></line><line x1="4.6" y1="7.2" x2="9.2" y2="8.8" stroke-width="1.2"></line></svg>`;
     case "dot":
       return `<svg ${common} class="${className}"><circle cx="12" cy="12" r="3" fill="currentColor"></circle></svg>`;
     default:
