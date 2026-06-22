@@ -506,7 +506,11 @@
   }
 
   .bracket-shell {
-    @apply p-4;
+    @apply flex flex-col gap-3 p-4;
+  }
+
+  .bracket-shell .section-title {
+    @apply flex-1;
   }
 
   .section-title {

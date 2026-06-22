@@ -1337,6 +1337,12 @@ function initEventDelegation() {
   if (detailMobileEl) {
     detailMobileEl.addEventListener("click", handleDetailCloseClick);
   }
+
+  const bracketBackEl = document.getElementById("bracket-back");
+  bracketBackEl?.addEventListener("click", () => {
+    resetAllFilters();
+    render();
+  });
 }
 
 initEventDelegation();
