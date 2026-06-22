@@ -1284,6 +1284,10 @@
 }
 
 @media (max-width: 767px) {
+  .bracket-shell {
+    @apply hidden;
+  }
+
   .ligamx-banner-inner {
     @apply grid-cols-1 gap-3;
   }
