@@ -1008,13 +1008,12 @@ function renderActiveSection() {
   const isMobile = isMobileViewport();
   const isTablet = isTableViewport();
   const isPhone = isMobile && !isTablet;
-  const isDesktop = window.innerWidth >= 1280;
   matchesEl.hidden = state.activeSection !== "matches";
   bracketShellEl.hidden = state.activeSection !== "bracket" || isMobile;
 
   if (mobileMenuToggleEl) {
     const hideHamburger =
-      isDesktop ||
+      window.innerWidth >= 1024 ||
       state.activeSection === "groups" ||
       state.activeSection === "detail";
     mobileMenuToggleEl.style.display = hideHamburger ? "none" : "";
@@ -1265,7 +1264,7 @@ window.addEventListener("resize", () => {
 
   if (mobileMenuToggleEl) {
     const hideHamburger =
-      currentWidth >= 1280 ||
+      currentWidth >= 1024 ||
       state.activeSection === "groups" ||
       state.activeSection === "detail";
     mobileMenuToggleEl.style.display = hideHamburger ? "none" : "";
