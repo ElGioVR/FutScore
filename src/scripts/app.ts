@@ -1008,8 +1008,13 @@ function renderActiveSection() {
   const isMobile = isMobileViewport();
   const isTablet = isTableViewport();
   const isPhone = isMobile && !isTablet;
+  const isDesktop = window.innerWidth >= 1280;
   matchesEl.hidden = state.activeSection !== "matches";
   bracketShellEl.hidden = state.activeSection !== "bracket" || isMobile;
+
+  if (mobileMenuToggleEl) {
+    mobileMenuToggleEl.style.display = isDesktop ? "none" : "";
+  }
 
   if (feedGroupsEl) {
     feedGroupsEl.hidden = !(
@@ -1252,9 +1257,13 @@ window.addEventListener("resize", () => {
   if (wasMobile && isNowDesktop) {
     state.mobileDetailOpen = false;
     setMobileMenuOpen(false);
-    render();
   }
 
+  if (mobileMenuToggleEl) {
+    mobileMenuToggleEl.style.display = currentWidth >= 1280 ? "none" : "";
+  }
+
+  render();
   lastViewportWidth = currentWidth;
 });
 

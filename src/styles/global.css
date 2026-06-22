@@ -1280,13 +1280,6 @@
   }
 }
 
-@media (min-width: 768px) {
-  .mobile-menu-toggle,
-  .mobile-menu {
-    display: none;
-  }
-}
-
 @media (max-width: 767px) {
   .ligamx-banner-inner {
     @apply grid-cols-1 gap-3;
