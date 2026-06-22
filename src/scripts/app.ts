@@ -1008,13 +1008,14 @@ function renderActiveSection() {
   const isMobile = isMobileViewport();
   const isTablet = isTableViewport();
   const isPhone = isMobile && !isTablet;
-  const sidebarGroupsEl = document.getElementById("groups");
-  if (sidebarGroupsEl) {
-    sidebarGroupsEl.hidden = isPhone;
-  }
 
   matchesEl.hidden = state.activeSection !== "matches";
-  bracketShellEl.hidden = state.activeSection !== "bracket" || isMobile;
+  bracketShellEl.hidden = state.activeSection !== "bracket";
+
+  const sidebarGroupsEl = document.getElementById("groups");
+  if (sidebarGroupsEl) {
+    sidebarGroupsEl.hidden = isPhone || state.activeSection !== "groups";
+  }
 
   if (mobileMenuToggleEl) {
     const hideHamburger =
