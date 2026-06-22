@@ -1268,7 +1268,7 @@ function initEventDelegation() {
         matchCard.dataset.matchId ?? state.selectedMatchId;
       state.selectedByUser = true;
       state.activeDetailTab = "facts";
-      if (isMobileViewport() && !isTableViewport()) {
+      if (isMobileViewport()) {
         state.activeSection = "detail";
         state.mobileDetailOpen = false;
         const matchGame = state.payload.games.find(
