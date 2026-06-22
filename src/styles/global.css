@@ -1281,6 +1281,10 @@
 }
 
 @media (max-width: 767px) {
+  #groups {
+    display: none;
+  }
+
   .ligamx-banner-inner {
     @apply grid-cols-1 gap-3;
   }
