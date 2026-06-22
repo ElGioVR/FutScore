@@ -1013,7 +1013,11 @@ function renderActiveSection() {
   bracketShellEl.hidden = state.activeSection !== "bracket" || isMobile;
 
   if (mobileMenuToggleEl) {
-    mobileMenuToggleEl.style.display = isDesktop ? "none" : "";
+    const hideHamburger =
+      isDesktop ||
+      state.activeSection === "groups" ||
+      state.activeSection === "detail";
+    mobileMenuToggleEl.style.display = hideHamburger ? "none" : "";
   }
 
   if (feedGroupsEl) {
@@ -1260,7 +1264,11 @@ window.addEventListener("resize", () => {
   }
 
   if (mobileMenuToggleEl) {
-    mobileMenuToggleEl.style.display = currentWidth >= 1280 ? "none" : "";
+    const hideHamburger =
+      currentWidth >= 1280 ||
+      state.activeSection === "groups" ||
+      state.activeSection === "detail";
+    mobileMenuToggleEl.style.display = hideHamburger ? "none" : "";
   }
 
   render();
