@@ -1008,6 +1008,11 @@ function renderActiveSection() {
   const isMobile = isMobileViewport();
   const isTablet = isTableViewport();
   const isPhone = isMobile && !isTablet;
+  const sidebarGroupsEl = document.getElementById("groups");
+  if (sidebarGroupsEl) {
+    sidebarGroupsEl.hidden = isPhone;
+  }
+
   matchesEl.hidden = state.activeSection !== "matches";
   bracketShellEl.hidden = state.activeSection !== "bracket" || isMobile;
 
