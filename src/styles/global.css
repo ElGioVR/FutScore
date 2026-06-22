@@ -1203,19 +1203,20 @@
   }
 }
 
-@keyframes countdown-pulse {
+@keyframes btn-pulse {
   0% {
-    transform: scale(1.6);
-    opacity: 0.6;
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
   }
   100% {
-    transform: scale(1);
-    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
   }
 }
 
-.countdown-pulse {
-  animation: live-pulse 0.3s ease-out;
+.btn-pulse {
+  animation: btn-pulse 0.6s ease-out;
 }
 
 @keyframes live-pulse {

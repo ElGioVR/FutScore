@@ -1109,6 +1109,7 @@ mobileMenuEl.querySelectorAll<HTMLAnchorElement>("a").forEach((link) => {
 });
 
 let bannerTimer: ReturnType<typeof setInterval> | null = null;
+const BANNER_DISMISSED_KEY = "ligamx-banner-dismissed";
 
 function setBannerBtnText(label: string, countdown = "") {
   if (!ligaMxBannerToggleEl) return;
@@ -1119,12 +1120,10 @@ function setBannerBtnText(label: string, countdown = "") {
     "#banner-countdown",
   ) as HTMLElement | null;
   if (textSpan) textSpan.textContent = label;
-  if (cdSpan) {
-    cdSpan.textContent = countdown;
-    cdSpan.classList.remove("countdown-pulse");
-    void cdSpan.offsetWidth;
-    cdSpan.classList.add("countdown-pulse");
-  }
+  if (cdSpan) cdSpan.textContent = countdown;
+  ligaMxBannerToggleEl.classList.remove("btn-pulse");
+  void ligaMxBannerToggleEl.offsetWidth;
+  ligaMxBannerToggleEl.classList.add("btn-pulse");
 }
 
 function startBannerCountdown() {
@@ -1139,6 +1138,9 @@ function startBannerCountdown() {
         ligaMxBannerEl.dataset.minimized = "true";
         setBannerBtnText("Mostrar");
       }
+      try {
+        sessionStorage.setItem(BANNER_DISMISSED_KEY, "1");
+      } catch {}
     } else {
       setBannerBtnText("Minimizar", `${seconds}s`);
     }
@@ -1165,7 +1167,14 @@ ligaMxBannerToggleEl?.addEventListener("click", () => {
   }
 });
 
-startBannerCountdown();
+const bannerWasDismissed =
+  sessionStorage.getItem(BANNER_DISMISSED_KEY) === "1";
+if (bannerWasDismissed && ligaMxBannerEl) {
+  ligaMxBannerEl.dataset.minimized = "true";
+  setBannerBtnText("Mostrar");
+} else {
+  startBannerCountdown();
+}
 
 document
   .querySelectorAll<HTMLButtonElement>("[data-view]")
